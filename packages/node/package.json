@@ -1,0 +1,22 @@
+{
+  "name": "@vcon/node",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build":"tsc"
+  },
+  "dependencies": {
+    "@vcon/core": "0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "18.16.12"
+  },
+  "author": "Yang Hai <yanghi-x@outlook.com>",
+  "keywords": [
+    "config",
+    "node config",
+    "vcon"
+  ],
+  "license": "MIT"
+}

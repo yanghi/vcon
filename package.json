@@ -1,0 +1,24 @@
+{
+  "name": "vcon",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky install"
+  },
+  "gitHooks": {
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.{ts,js,md}": [
+      "prettier --write"
+    ]
+  },
+  "dependencies": {
+    "lint-staged": "^13.2.3",
+    "prettier": "^3.0.1",
+    "typescript": "^5.1.6"
+  },
+  "devDependencies": {
+    "husky": "^8.0.0"
+  }
+}
