@@ -8,3 +8,4 @@ export * from './constans';
 
 export * from './parser/json';
 export * from './parser/yaml';
+export * from './parser/json5';

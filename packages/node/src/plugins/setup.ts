@@ -1,4 +1,4 @@
-import { JSONParser, Vcon, VconPlugin, YAMLParser } from '@vcon/core';
+import { JSONParser, Vcon, VconPlugin, YAMLParser, JSON5Parser } from '@vcon/core';
 import { FsLoader } from '../loader/fs';
 
 export class SetupPlugin implements VconPlugin {
@@ -7,5 +7,6 @@ export class SetupPlugin implements VconPlugin {
     vcon.addLoader(new FsLoader());
     vcon.addParser(new JSONParser());
     vcon.addParser(new YAMLParser());
+    vcon.addParser(new JSON5Parser());
   }
 }

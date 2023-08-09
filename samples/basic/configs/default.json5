@@ -1,0 +1,8 @@
+{
+  // comments
+  "app": {
+    "foo": 'foo'
+  },
+  "version": 6,
+  "name": "json5"
+}

@@ -4,7 +4,9 @@
   "description": "@vcon/core",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc"
   },
@@ -18,5 +20,9 @@
     "node config",
     "vcon"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "json5": "^2.2.3",
+    "yaml": "^2.3.1"
+  }
 }

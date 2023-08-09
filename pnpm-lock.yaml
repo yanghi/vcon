@@ -18,7 +18,12 @@ importers:
   packages/core:
     specifiers:
       '@types/node': 18.16.12
+      json5: ^2.2.3
       typescript: ^5.1.6
+      yaml: ^2.3.1
+    dependencies:
+      json5: 2.2.3
+      yaml: 2.3.1
     devDependencies:
       '@types/node': 18.16.12
       typescript: 5.1.6
@@ -252,6 +257,12 @@ packages:
 
   /isexe/2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
+    dev: false
+
+  /json5/2.2.3:
+    resolution: {integrity: sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==}
+    engines: {node: '>=6'}
+    hasBin: true
     dev: false
 
   /lilconfig/2.1.0:
