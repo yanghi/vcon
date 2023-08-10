@@ -1,12 +1,14 @@
 const vcon = require('vcon').default;
+const assert = require('assert');
 
 vcon.addConfig('./configs/default');
-vcon.addConfig('./configs/myConfig.yaml');
+vcon.addConfig('./configs/json5');
+vcon.addConfig('./configs/yaml');
 
 vcon.load();
 
-console.log('get all config sources', vcon.getAllConfigSources());
-console.log('get app.foo', vcon.get('app.foo'));
-console.log('has app.foo', vcon.has('app.foo'));
+assert.equal(vcon.getAllConfigSources().length, 3, `vcon.getAllConfigSources() should get all sources`);
 
-console.log('get arguments', vcon.getArgs());
+assert.equal(vcon.get('app.foo'), 'foo', `vcon.get() return correct value`);
+assert.equal(vcon.has('app.foo'), true, `vcon.has() return correct value`);
+assert.equal(typeof vcon.getArgs()._, 'object', `vcon.getArgs() return correct arguments`);
