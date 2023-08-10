@@ -1,4 +1,6 @@
 import { SetupPlugin } from '@vcon/node';
+import '@vcon/node/dist/cmd-args';
+
 import { Vcon } from '@vcon/core';
 
 const vcon = new Vcon({

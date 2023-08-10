@@ -3,12 +3,16 @@
   "version": "0.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build":"tsc"
+    "build": "tsc"
   },
   "dependencies": {
-    "@vcon/core": "0.0.1"
+    "@types/minimist": "^1.2.2",
+    "@vcon/core": "0.0.1",
+    "minimist": "^1.2.8"
   },
   "devDependencies": {
     "@types/node": "18.16.12"

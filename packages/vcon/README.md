@@ -7,6 +7,11 @@ Customizable configuration controls.
 ```js
 import vcon from 'vcon';
 
+// Add configuration source from command-line arguments
+if (vcon.getArgs().config) {
+  vcon.addConfig(vcon.getArgs().config);
+}
+
 vcon.addConfig('./configs/default');
 vcon.addConfig('./configs/myConfig.yaml');
 

@@ -46,8 +46,32 @@ export class Vcon {
   private _load = false;
 
   private _options: VconNormalizedOptions;
+
+  private __init_hooks__?: Function[];
   constructor(options: VconOptions = {}) {
     this._options = normalizeSourceOptions(options);
+
+    const initHooks = Object.getPrototypeOf(this).__init_hooks__;
+
+    if (Array.isArray(initHooks)) {
+      initHooks.forEach((hook) => hook.call(this, this._options));
+    }
+  }
+  static extend<P>(
+    props: P &
+      Record<any, any> & {
+        onInit?: (options: VconNormalizedOptions) => void;
+      },
+  ) {
+    if (props.onInit) {
+      if (!this.prototype.__init_hooks__) {
+        this.prototype.__init_hooks__ = [];
+      }
+      this.prototype.__init_hooks__.push(props.onInit);
+      delete props.onInit;
+    }
+
+    Object.assign(this.prototype, props);
   }
   addParser(parser: VconParser) {
     const name = parser.name;

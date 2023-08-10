@@ -8,3 +8,5 @@ vcon.load();
 console.log('get all config sources', vcon.getAllConfigSources());
 console.log('get app.foo', vcon.get('app.foo'));
 console.log('has app.foo', vcon.has('app.foo'));
+
+console.log('get arguments', vcon.getArgs());
