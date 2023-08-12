@@ -13,6 +13,9 @@ vcon.setSchema({
         foo: {
           type: 'string',
         },
+        missed: {
+          default: 'miss',
+        },
       },
     },
   },
@@ -25,3 +28,5 @@ assert.equal(vcon.getAllConfigSources().length, 3, `vcon.getAllConfigSources() s
 assert.equal(vcon.get('app.foo'), 'foo', `vcon.get() return correct value`);
 assert.equal(vcon.has('app.foo'), true, `vcon.has() return correct value`);
 assert.equal(typeof vcon.getArgs()._, 'object', `vcon.getArgs() return correct arguments`);
+
+assert.equal(vcon.get('app.missed'), 'miss', `fill default value if filed missed`);

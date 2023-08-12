@@ -163,7 +163,10 @@ export class Vcon {
     });
 
     if (this._schema) {
-      walkSchema(this._schema, this._configSources[0]?.config);
+      if (this._configSources[0]) {
+        const { result } = walkSchema(this._schema, this._configSources[0].config);
+        this._configSources[0].config = result;
+      }
     }
   }
   private _schema?: VconSchema | undefined;

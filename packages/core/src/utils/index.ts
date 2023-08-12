@@ -26,3 +26,7 @@ export function typeOf(value: any): ValueType {
   if (Array.isArray(value)) return 'array';
   return typeof value;
 }
+
+export function uniqueArray<T>(value: T[]): T[] {
+  return [...new Set(value)];
+}

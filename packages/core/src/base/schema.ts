@@ -1,4 +1,4 @@
-import { hasOwnProp, isObject, typeOf } from '../utils';
+import { hasOwnProp, isObject, typeOf, uniqueArray } from '../utils';
 
 export type PropertyType = 'object' | 'array' | 'string' | 'boolean' | 'number';
 
@@ -37,7 +37,7 @@ export type VconSchema = Record<string, JSONSchema> | JSONSchema;
 function normalizedRootSchema(schema: VconSchema): JSONSchema {
   if (schema.items || schema.properties) return schema;
 
-  if (schema.type == 'object' && !('additionalProperties' in schema)) {
+  if (!schema.type) {
     return {
       properties: schema as any,
     };
@@ -64,23 +64,40 @@ function validateSchemaType(name: string, schema: JSONSchema, schemaValue: any):
   return [type as any, undefined];
 }
 
+function isValidType(type: string): type is PropertyType {
+  return ['object', 'array', 'string', 'boolean', 'number'].includes(type);
+}
+function isValidValue(value: unknown): value is SchemaValue {
+  return isValidType(typeOf(value));
+}
+
 function normalizeSchema(schema: JSONSchema) {
   if (!schema.type) {
-    const types: PropertyType[] = [];
+    let types: PropertyType[] = [];
     if (schema.properties) {
       types.push('object');
     }
     if (schema.items) {
       types.push('array');
     }
-    if (types.length) {
-      schema.type = types;
-    }
 
-    if (schema.required?.length == 0) {
-      // todo warn log
-      delete schema.required;
+    if (hasOwnProp(schema, 'default')) {
+      let defautValueType = typeOf(schema.default);
+      if (isValidType(defautValueType)) {
+        types.push(defautValueType);
+      } else {
+        delete schema.default;
+        console.warn(`Invalid default value type: ${defautValueType}`);
+      }
     }
+    if (types.length) {
+      types = uniqueArray(types);
+      schema.type = types.length == 1 ? types[0] : types;
+    }
+  }
+  if (schema.required?.length == 0) {
+    delete schema.required;
+    console.warn(`object schema "required" field is empty arrays, has been ignored`);
   }
 }
 
@@ -91,7 +108,13 @@ function namePath(parent: string, current: string | number, isArray = false): st
   return parent + (isArray ? `[${current}]` : `.${current}`);
 }
 
-function walk(scheduler: SchemaScheduler, schema: JSONSchema, schemaValue: any, name: string) {
+function walk(
+  scheduler: SchemaScheduler,
+  schema: JSONSchema,
+  schemaValue: any,
+  name: string,
+  onPass: (value: SchemaValue) => void,
+) {
   normalizeSchema(schema);
 
   if (schemaValue === undefined) {
@@ -107,6 +130,8 @@ function walk(scheduler: SchemaScheduler, schema: JSONSchema, schemaValue: any, 
 
   if (!inspectType) return;
 
+  onPass(schemaValue);
+
   if (inspectType == 'object') {
     if (schema.required) {
       let missed = schema.required.filter((required) => !hasOwnProp(schemaValue, required));
@@ -119,7 +144,9 @@ function walk(scheduler: SchemaScheduler, schema: JSONSchema, schemaValue: any, 
 
     if (schema.properties) {
       for (let prop in schema.properties) {
-        walk(scheduler, schema.properties[prop], schemaValue?.[prop], namePath(name, prop));
+        walk(scheduler, schema.properties[prop], schemaValue?.[prop], namePath(name, prop), (value) => {
+          schemaValue[prop] = value;
+        });
       }
     }
     if (schema.additionalProperties == false) {
@@ -135,14 +162,18 @@ function walk(scheduler: SchemaScheduler, schema: JSONSchema, schemaValue: any, 
       for (let key in schemaValue) {
         if (!hasOwnProp(schema.properties, key)) {
           // todo, walk with a flag that to sign this is additional properties
-          walk(scheduler, schema.additionalProperties, schemaValue[key], namePath(name, key));
+          walk(scheduler, schema.additionalProperties, schemaValue[key], namePath(name, key), (value) => {
+            schemaValue[key] = value;
+          });
         }
       }
     }
   } else if (inspectType === 'array') {
     if (schema.items) {
       for (let i = 0; i < schemaValue.length; i++) {
-        walk(scheduler, schema.items, schemaValue[i], namePath(name, i, true));
+        walk(scheduler, schema.items, schemaValue[i], namePath(name, i, true), (value) => {
+          schemaValue[i] = value;
+        });
       }
     }
   }
@@ -191,7 +222,13 @@ export function walkSchema(
     error: new ErrorCollection(scheduleOptions.errorStrict),
   };
 
-  walk(scheduler, normalizedRootSchema(schema), schemaValue, ROOT_OBJECT);
+  walk(scheduler, normalizedRootSchema(schema), schemaValue, ROOT_OBJECT, (value) => {
+    schemaValue = value;
+  });
 
   scheduler.error.log();
+
+  return {
+    result: schemaValue,
+  };
 }
