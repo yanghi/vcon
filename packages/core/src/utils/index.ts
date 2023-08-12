@@ -30,3 +30,6 @@ export function typeOf(value: any): ValueType {
 export function uniqueArray<T>(value: T[]): T[] {
   return [...new Set(value)];
 }
+export function isInteger(value: unknown): boolean {
+  return Number.isInteger(value);
+}

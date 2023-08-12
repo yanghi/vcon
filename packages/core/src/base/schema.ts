@@ -1,6 +1,6 @@
-import { hasOwnProp, isObject, typeOf, uniqueArray } from '../utils';
+import { hasOwnProp, isInteger, isObject, typeOf, uniqueArray } from '../utils';
 
-export type PropertyType = 'object' | 'array' | 'string' | 'boolean' | 'number';
+export type PropertyType = 'object' | 'array' | 'string' | 'boolean' | 'number' | 'null' | 'integer';
 
 type SchemaObject = {
   [x: string]: SchemaValue;
@@ -49,8 +49,11 @@ function normalizedRootSchema(schema: VconSchema): JSONSchema {
 function validateSchemaType(name: string, schema: JSONSchema, schemaValue: any): [PropertyType | void, Error | void] {
   if (!schema.type) return [undefined, undefined];
 
-  const type = typeOf(schemaValue);
+  let type = typeOf(schemaValue);
   if (typeof schema.type === 'string') {
+    if (schema.type === 'integer' && isInteger(schemaValue)) {
+      type = 'integer' as any;
+    }
     if (type != schema.type) {
       return [undefined, new Error(`Invalid type, ${name} must be a ${schema.type} type, got ${type}`)];
     }
