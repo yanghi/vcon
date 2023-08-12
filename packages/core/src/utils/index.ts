@@ -8,3 +8,21 @@ export const hasOwnProp = (obj: any, prop: string): boolean => {
 export const hasProp = (obj: any, prop: string) => {
   return prop in obj;
 };
+export type ValueType =
+  | 'bigint'
+  | 'symbol'
+  | 'undefined'
+  | 'function'
+  | 'null'
+  | 'object'
+  | 'array'
+  | 'string'
+  | 'boolean'
+  | 'number';
+
+export function typeOf(value: any): ValueType {
+  if (!value && typeof value == 'object') return 'null';
+
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
+}

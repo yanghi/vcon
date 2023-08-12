@@ -5,6 +5,19 @@ vcon.addConfig('./configs/default');
 vcon.addConfig('./configs/json5');
 vcon.addConfig('./configs/yaml');
 
+vcon.setSchema({
+  properties: {
+    app: {
+      type: 'object',
+      properties: {
+        foo: {
+          type: 'string',
+        },
+      },
+    },
+  },
+});
+
 vcon.load();
 
 assert.equal(vcon.getAllConfigSources().length, 3, `vcon.getAllConfigSources() should get all sources`);

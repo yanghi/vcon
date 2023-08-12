@@ -3,6 +3,7 @@ export * from './base/loader';
 export * from './base/parser';
 export * from './base/plugin';
 export * from './base/sourceOptions';
+export { VconSchema, JSONSchema } from './base/schema';
 
 export * from './constans';
 

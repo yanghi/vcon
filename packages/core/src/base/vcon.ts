@@ -1,3 +1,4 @@
+import { VconSchema } from './schema';
 import { VconParser, VconParseResult } from './parser';
 import { VconLoader } from './loader';
 import {
@@ -8,6 +9,7 @@ import {
 } from './sourceOptions';
 import { VconPlugin } from './plugin';
 import { dotProp } from '../utils/dotProp';
+import { walkSchema } from './schema';
 
 export interface VconNormalizedOptions {
   ext: string[];
@@ -102,7 +104,7 @@ export class Vcon {
 
   private _setupPlugins() {
     for (const [_, plugin] of this._plugins) {
-      plugin.setup(this);
+      plugin.setup(this, this._options);
     }
   }
   get<T = any>(path: string): T {
@@ -159,5 +161,13 @@ export class Vcon {
         }
       });
     });
+
+    if (this._schema) {
+      walkSchema(this._schema, this._configSources[0]?.config);
+    }
+  }
+  private _schema?: VconSchema | undefined;
+  setSchema(schema: VconSchema) {
+    this._schema = schema;
   }
 }
