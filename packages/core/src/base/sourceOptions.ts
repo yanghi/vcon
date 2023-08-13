@@ -1,9 +1,10 @@
 import * as path from 'path';
 
+export type SourceType = 'fs' | 'default';
 export interface NormalizedSourceOptions {
   ext: string[];
   path: string;
-  sourceType: 'fs';
+  sourceType: SourceType;
 }
 
 export interface SourceOptions extends Partial<Omit<NormalizedSourceOptions, 'sourceType'>> {}

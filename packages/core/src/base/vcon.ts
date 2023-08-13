@@ -162,10 +162,26 @@ export class Vcon {
       });
     });
 
+    if (!this._configSources.length) {
+      console.warn(`[vcon warn]: No match any config sources`);
+    }
+
     if (this._schema) {
-      if (this._configSources[0]) {
-        const { result } = walkSchema(this._schema, this._configSources[0].config);
-        this._configSources[0].config = result;
+      const { result } = walkSchema(this._schema, dotProp(this._configSources, '0.config').value);
+      if (result === undefined) {
+        console.error(`[vcon error]: exit code =1, No valid config sources`);
+        process.exit(1);
+      } else {
+        if (this._configSources.length) {
+          this._configSources[0].config = result;
+        } else {
+          this._configSources.push({
+            config: result,
+            options: {
+              sourceType: 'default',
+            } as any,
+          });
+        }
       }
     }
   }
