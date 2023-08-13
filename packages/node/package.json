@@ -1,6 +1,6 @@
 {
   "name": "@vcon/node",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@types/minimist": "^1.2.2",
-    "@vcon/core": "0.0.1",
+    "@vcon/core": "1.0.0",
     "minimist": "^1.2.8"
   },
   "devDependencies": {
