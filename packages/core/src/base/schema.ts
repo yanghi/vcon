@@ -13,7 +13,7 @@ type SchemaValue = string | number | boolean | SchemaArray | SchemaObject | null
 export interface JSONSchema extends VConSchemaExtend {
   type?: PropertyType | PropertyType[];
   properties?: Record<string, JSONSchema>;
-  required?: string[];
+  required?: string[] | boolean;
   items?: JSONSchema;
   additionalProperties?: JSONSchema | boolean;
   default?: SchemaValue;
@@ -46,7 +46,11 @@ function normalizedRootSchema(schema: VconSchema): JSONSchema {
   return schema;
 }
 
-function validateSchemaType(name: string, schema: JSONSchema, schemaValue: any): [PropertyType | void, Error | void] {
+function validateSchemaType(
+  name: string,
+  schema: JSONSchema,
+  schemaValue: any,
+): [PropertyType | undefined, Error | undefined] {
   if (!schema.type) return [undefined, undefined];
 
   let type = typeOf(schemaValue);
@@ -55,13 +59,10 @@ function validateSchemaType(name: string, schema: JSONSchema, schemaValue: any):
       type = 'integer' as any;
     }
     if (type != schema.type) {
-      return [undefined, new Error(`Invalid type, ${name} must be a ${schema.type} type, got ${type}`)];
+      return [undefined, new Error(`Invalid type, must be a ${schema.type} type, got ${type}`)];
     }
   } else if (schema.type && !schema.type.includes(type as any)) {
-    return [
-      undefined,
-      new Error(`Invalid type, ${name} must be one of the types ${schema.type.join(',')}, got ${type}`),
-    ];
+    return [undefined, new Error(`Invalid type, must be one of the types ${schema.type.join(',')}, got ${type}`)];
   }
 
   return [type as any, undefined];
@@ -98,7 +99,7 @@ function normalizeSchema(schema: JSONSchema) {
       schema.type = types.length == 1 ? types[0] : types;
     }
   }
-  if (schema.required?.length == 0) {
+  if (Array.isArray(schema.required) && schema.required.length == 0) {
     delete schema.required;
     console.warn(`object schema "required" field is empty arrays, has been ignored`);
   }
@@ -127,21 +128,35 @@ function walk(
   }
 
   const currentName = namePath(name, undefined);
-  const [inspectType, typeErr] = validateSchemaType(currentName, schema, schemaValue);
 
-  scheduler.error.add(typeErr);
+  let inspectType: PropertyType | undefined;
+
+  let checkType = true;
+  if (schemaValue === undefined) {
+    if (schema.required) {
+      scheduler.error.add(name, new Error(`Missing required value`));
+      return;
+    } else {
+      checkType = false;
+    }
+  }
+
+  if (checkType) {
+    const validateTypeRes = validateSchemaType(currentName, schema, schemaValue);
+
+    scheduler.error.add(name, validateTypeRes[1]);
+    inspectType = validateTypeRes[0];
+  }
 
   if (!inspectType) return;
 
   onPass(schemaValue);
 
   if (inspectType == 'object') {
-    if (schema.required) {
+    if (Array.isArray(schema.required)) {
       let missed = schema.required.filter((required) => !hasOwnProp(schemaValue, required));
       if (missed.length) {
-        scheduler.error.add(
-          new Error(`Missed required, object ${currentName} missed required properties: [${missed.join(',')}]`),
-        );
+        scheduler.error.add(name, new Error(`Missing required properties, missing : [${missed.join(',')}]`));
       }
     }
 
@@ -155,9 +170,7 @@ function walk(
     if (schema.additionalProperties == false) {
       for (let key in schemaValue) {
         if (!hasOwnProp(schema.properties, key)) {
-          scheduler.error.add(
-            new Error(`No additionalProperties, object ${currentName} got additional properties "${key}"`),
-          );
+          scheduler.error.add(name, new Error(`No additional properties, got additional properties "${key}"`));
           continue;
         }
       }
@@ -172,7 +185,7 @@ function walk(
       }
     }
   } else if (inspectType === 'array') {
-    if (schema.items) {
+    if (schema.items && schemaValue) {
       for (let i = 0; i < schemaValue.length; i++) {
         walk(scheduler, schema.items, schemaValue[i], namePath(name, i, true), (value) => {
           schemaValue[i] = value;
@@ -187,22 +200,35 @@ interface SchemaScheduler {
 }
 
 class ErrorCollection {
-  errors: Error[] = [];
+  errors = new Map<string, Error[]>();
   constructor(public strict = false) {}
+  private _size: number = 0;
+  get size() {
+    return this._size;
+  }
   log() {
-    if (this.errors.length) {
-      console.log(`[Vcon Schema] got ${this.errors.length} errors:`);
-      this.errors.forEach((e) => {
-        console.log(e);
+    if (this.errors.size) {
+      console.log(`[Vcon Schema] got ${this._size} errors:`);
+      this.errors.forEach((errors, key) => {
+        console.log(`Got ${errors.length} errors on ${key}:`);
+        for (let i = 0; i < errors.length; i++) {
+          console.log('  ', errors[i].message);
+        }
       });
     }
   }
-  add(e: Error | void | undefined | Error[]) {
+  add(name: string, e: Error | void | undefined | Error[]) {
     if (e) {
+      if (!this.errors.has(name)) {
+        this.errors.set(name, []);
+      }
+      const group = this.errors.get(name);
       if (Array.isArray(e)) {
-        this.errors.push(...e);
+        group.push(...e);
+        this._size += e.length;
       } else {
-        this.errors.push(e);
+        group.push(e);
+        this._size++;
       }
       if (this.strict) {
         this.log();
