@@ -1,4 +1,4 @@
-import { hasOwnProp, isInteger, isObject, typeOf, uniqueArray } from '../utils';
+import { duplicatesElements, hasOwnProp, isInteger, isObject, quoteValue, typeOf, uniqueArray } from '../utils';
 
 export type PropertyType = 'object' | 'array' | 'string' | 'boolean' | 'number' | 'null' | 'integer';
 
@@ -19,6 +19,16 @@ export interface JSONSchema extends VConSchemaExtend {
   default?: SchemaValue;
   title?: string;
   description?: string;
+
+  maximum?: number | undefined;
+  minimum?: number | undefined;
+  maxLength?: number | undefined;
+  minLength?: number | undefined;
+  enum?: SchemaValue[] | undefined;
+  maxItems?: number | undefined;
+  minItems?: number | undefined;
+  uniqueItems?: boolean | undefined;
+  pattern?: string | undefined;
 }
 
 export interface ValueSource {
@@ -107,8 +117,6 @@ function normalizeSchema(schema: JSONSchema) {
 
 const ROOT_OBJECT = '$ROOT';
 function namePath(parent: string, current: string | number, isArray = false): string {
-  if (!current) return parent;
-
   return parent + (isArray ? `[${current}]` : `.${current}`);
 }
 
@@ -127,7 +135,10 @@ function walk(
     }
   }
 
-  const currentName = namePath(name, undefined);
+  const currentName = name;
+  const addError = (msg: string) => {
+    scheduler.error.add(name, new Error(msg));
+  };
 
   let inspectType: PropertyType | undefined;
 
@@ -190,6 +201,55 @@ function walk(
         walk(scheduler, schema.items, schemaValue[i], namePath(name, i, true), (value) => {
           schemaValue[i] = value;
         });
+      }
+      if (schema.minItems && schemaValue.length < schema.minItems) {
+        addError('There must be a minimum of ' + schema.minItems + ' in the array');
+      }
+      if (schema.maxItems && schemaValue.length > schema.maxItems) {
+        addError('There must be a maximum of ' + schema.maxItems + ' in the array');
+      }
+      if (schema.uniqueItems) {
+        const duplicates = duplicatesElements(schemaValue);
+        console.log('Duplicates', duplicates);
+        if (duplicates.length) {
+          addError(`Duplicates items, duplicated items: ${quoteValue(duplicates)}`);
+        }
+      }
+    }
+  } else {
+    if (schema.maxLength && typeof schemaValue == 'string' && schemaValue.length > schema.maxLength) {
+      addError(
+        `Invalid characters length, may only be ${schema.maxLength}  characters long, got ${schemaValue.length}`,
+      );
+    }
+    if (schema.minLength && typeof schemaValue == 'string' && schemaValue.length < schema.minLength) {
+      addError(
+        `Invalid characters length, must be at least ${schema.minLength} characters long, got ${schemaValue.length}`,
+      );
+    }
+    if (
+      typeof schema.minimum !== 'undefined' &&
+      typeof schemaValue == typeof schema.minimum &&
+      schema.minimum > schemaValue
+    ) {
+      addError(`Invalid range, must have a minimum value of ${schema.minimum}, got ${schemaValue}`);
+    }
+    if (
+      typeof schema.maximum !== 'undefined' &&
+      typeof schemaValue == typeof schema.maximum &&
+      schema.maximum < schemaValue
+    ) {
+      addError(`Invalid range, must have a maximum value of ${schema.maximum}, got ${schemaValue}`);
+    }
+
+    if (schema.pattern && typeof schemaValue == 'string' && !schemaValue.match(schema.pattern)) {
+      addError(`Pattern not match, string "${schemaValue}" not match the regex pattern ${schema.pattern}`);
+    }
+
+    if (schema.enum) {
+      let matched = schema.enum.find((em) => em === schemaValue);
+      if (!matched) {
+        addError(`Invalid value, ${quoteValue(schemaValue)} not one of the enumeration ${schema.enum.join(',')}`);
       }
     }
   }

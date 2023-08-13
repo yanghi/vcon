@@ -50,14 +50,25 @@ Vcon implemented some basically features of json-schema for verification.
 
 The supported features table below:
 
-| Name                 | Type                                  | Descrition                                                                                                                                                        |     |     |     |     |     |     |     |
-| -------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --- | --- | --- | --- | --- | --- |
-| type                 | `PropertyType \| Array<PropertyType>` | Specifies the data type of the value                                                                                                                              |     |     |     |     |     |     |     |
-| properties           | `Record<string, JSONSchema>`          | Defines an object's properties and their respective JSON Schema definitions.                                                                                      |     |     |     |     |     |     |     |
-| default              | `SchemaValue`                         | Provides a default value for a property or an array element if it is not explicitly defined.                                                                      |     |     |     |     |     |     |     |
-| required             | `Array<string>`                       | Specifies the properties that must be present in the object. It is an array of property names.                                                                    |     |     |     |     |     |     |     |
-| additionalProperties | `JSONSchema \| boolean`               | Specifies whether additional properties which are not defined in "properties" are allowed in the object or not. It can be a boolean value or a schema definition. |     |     |     |     |     |     |     |
-| items                | `JSONSchema`                          | Defines the schema of the array elements. It can be a single schema or an array of schemas if the array can have different types of elements.                     |     |     |     |     |     |     |     |
+| Field                | Type                                  | Description                                    |
+| -------------------- | ------------------------------------- | ---------------------------------------------- |
+| type                 | `PropertyType \| Array<PropertyType>` | Defines the data type                          |
+| properties           | `Record<string, JSONSchema>`          | Specifies the object's properties              |
+| required             | `Array<string>\|boolean`              | Lists the required properties                  |
+| items                | `JSONSchema`                          | Defines the schema of items                    |
+| additionalProperties | `boolean`                             | Specifies if additional properties are allowed |
+| default              | `SchemaValue`                         | Specifies the default value                    |
+| title                | `string`                              | Provides a title for the schema                |
+| description          | `string`                              | Describes the purpose of the schema            |
+| maximum              | `number`                              | Defines the maximum value allowed              |
+| minimum              | `number`                              | Defines the minimum value allowed              |
+| maxLength            | `Integer`                             | Specifies the maximum string length            |
+| minLength            | `Integer`                             | Specifies the minimum string length            |
+| enum                 | `Array<SchemaValue>`                  | Lists the allowable values                     |
+| maxItems             | `Integer`                             | Defines the maximum number of items            |
+| minItems             | `Integer`                             | Defines the minimum number of items            |
+| uniqueItems          | `boolean`                             | Indicates if array items must be unique        |
+| pattern              | `string`                              | Specifies a regular expression pattern         |
 
 Related type definitions
 
