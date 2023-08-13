@@ -15,8 +15,73 @@ if (vcon.getArgs().config) {
 vcon.addConfig('./configs/default');
 vcon.addConfig('./configs/myConfig.yaml');
 
+// use a config schema similar as json-shema to verify and transform
+vcon.setSchema({
+  type: 'object',
+  properties: {
+    app: {
+      properties: {
+        port: {
+          type: 'number',
+          default: 3000,
+        },
+        prefixs: {
+          type: 'array',
+          required: true,
+          items: {
+            type: 'string',
+          },
+        },
+      },
+    },
+  },
+});
+
 vcon.load();
 
-console.log('get app.foo', vcon.get('app.foo'));
+console.log('get app.port', vcon.get('app.port'));
+console.log('get app.prefixs', vcon.get('app.prefixs'));
 console.log('has app.foo', vcon.has('app.foo'));
+```
+
+## Schema
+
+Vcon implemented some basically features of json-schema for verification.
+
+The supported features table below:
+
+| Field                | Type                                  | Description                                    |
+| -------------------- | ------------------------------------- | ---------------------------------------------- |
+| type                 | `PropertyType \| Array<PropertyType>` | Defines the data type                          |
+| properties           | `Record<string, JSONSchema>`          | Specifies the object's properties              |
+| required             | `Array<string>\|boolean`              | Lists the required properties                  |
+| items                | `JSONSchema`                          | Defines the schema of items                    |
+| additionalProperties | `boolean`                             | Specifies if additional properties are allowed |
+| default              | `SchemaValue`                         | Specifies the default value                    |
+| title                | `string`                              | Provides a title for the schema                |
+| description          | `string`                              | Describes the purpose of the schema            |
+| maximum              | `number`                              | Defines the maximum value allowed              |
+| minimum              | `number`                              | Defines the minimum value allowed              |
+| maxLength            | `Integer`                             | Specifies the maximum string length            |
+| minLength            | `Integer`                             | Specifies the minimum string length            |
+| enum                 | `Array<SchemaValue>`                  | Lists the allowable values                     |
+| maxItems             | `Integer`                             | Defines the maximum number of items            |
+| minItems             | `Integer`                             | Defines the minimum number of items            |
+| uniqueItems          | `boolean`                             | Indicates if array items must be unique        |
+| pattern              | `string`                              | Specifies a regular expression pattern         |
+
+Related type definitions
+
+```ts
+// string of value type
+type PropertyType = 'object' | 'array' | 'string' | 'boolean' | 'number' | 'null' | 'integer';
+
+// value type
+type SchemaValue = string | number | boolean | SchemaArray | SchemaObject | null;
+
+type SchemaObject = {
+  [x: string]: SchemaValue;
+};
+
+type SchemaArray = Array<SchemaValue>;
 ```

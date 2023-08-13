@@ -4,6 +4,9 @@ importers:
 
   .:
     dependencies:
+      '@types/node':
+        specifier: 18.16.12
+        version: 18.16.12
       lint-staged:
         specifier: ^13.2.3
         version: 13.2.3
@@ -73,7 +76,6 @@ packages:
 
   /@types/node@18.16.12:
     resolution: {integrity: sha512-tIRrjbY9C277MOfP8M3zjMIhtMlUJ6YVqkGgLjz+74jVsdf4/UjC6Hku4+1N0BS0qyC0JAS6tJLUk9H6JUKviQ==}
-    dev: true
 
   /aggregate-error@3.1.0:
     resolution: {integrity: sha512-4I7Td01quW/RpocfNayFdFVk1qSuoh0E7JrbRJ16nH01HhKFQ88INq9Sd+nd72zqRySlr9BmDA8xlEJ6vJMrYA==}
