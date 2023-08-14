@@ -111,22 +111,19 @@ class TomlParser implements VconParser {
     result;
 
     if (meta.ext === '.toml') {
-      console.log('configuration file raw content', loaded.content);
-      const myParserResult = {};
       try {
-        toml.parse(loaded.content);
+        return {
+          config: toml.parse(loaded.content),
+        };
       } catch (e) {
         console.error('Parsing error on line ' + e.line + ', column ' + e.column + ': ' + e.message);
       }
-      return {
-        config: myParserResult,
-      };
     }
   }
 }
 
-vcon.addParser(new MyParser());
+vcon.addParser(new TomlParser());
 vcon.addExtension('.toml');
-// now you can use '.toml' extension file
+// now you can use '.toml' file
 vcon.addConfig('path/to/name.toml');
 ```
