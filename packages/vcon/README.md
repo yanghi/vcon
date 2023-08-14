@@ -85,3 +85,39 @@ type SchemaObject = {
 
 type SchemaArray = Array<SchemaValue>;
 ```
+
+## Supported configuration file extensions
+
+Vcon supports the following file extensions by default，You can implement a `Parser` to support more file extensions，about `Parser` see next section
+
+- `.json`
+- `.yaml`
+- `.yml`
+- `.json5`
+
+## Parser
+
+Vcon use Parser to convert the content of the configuration file content.
+
+```ts
+import vcon, { VconLoadResult, VconParseMeta, VconParseResult, VconParser } from 'vcon';
+
+class MyParser implements VconParser {
+  name = 'MyParser';
+  parse(loaded, result, meta): void | VconParseResult {
+    //
+    if (result) return result;
+    //
+    if (meta.ext === '.txt') {
+      console.log('configuration file raw content', loaded.content);
+      const myParserResult = {};
+
+      return {
+        config: myParserResult,
+      };
+    }
+  }
+}
+
+vcon.addParser(new MyParser());
+```
