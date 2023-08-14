@@ -12,6 +12,7 @@ if (vcon.getArgs().config) {
   vcon.addConfig(vcon.getArgs().config);
 }
 
+// Omitting the file extension, it will attempt to load all supported extensions.
 vcon.addConfig('./configs/default');
 vcon.addConfig('./configs/myConfig.yaml');
 
@@ -99,19 +100,24 @@ Vcon supports the following file extensions by default，You can implement a `Pa
 
 Vcon use Parser to convert the content of the configuration file content.
 
+Here is an example for parse a '.toml' configuration file
+
 ```ts
 import vcon, { VconLoadResult, VconParseMeta, VconParseResult, VconParser } from 'vcon';
 
-class MyParser implements VconParser {
-  name = 'MyParser';
-  parse(loaded, result, meta): void | VconParseResult {
-    //
-    if (result) return result;
-    //
-    if (meta.ext === '.txt') {
+class TomlParser implements VconParser {
+  parse(loaded, VconLoadResult | undefined, result: VconParseResult, meta: VconParseMeta): void | VconParseResult {
+    // Results of other Parser transformations
+    result;
+
+    if (meta.ext === '.toml') {
       console.log('configuration file raw content', loaded.content);
       const myParserResult = {};
-
+      try {
+        toml.parse(loaded.content);
+      } catch (e) {
+        console.error('Parsing error on line ' + e.line + ', column ' + e.column + ': ' + e.message);
+      }
       return {
         config: myParserResult,
       };
@@ -120,4 +126,7 @@ class MyParser implements VconParser {
 }
 
 vcon.addParser(new MyParser());
+vcon.addExtension('.toml');
+// now you can use '.toml' extension file
+vcon.addConfig('path/to/name.toml');
 ```
