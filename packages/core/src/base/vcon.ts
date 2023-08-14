@@ -59,6 +59,20 @@ export class Vcon {
       initHooks.forEach((hook) => hook.call(this, this._options));
     }
   }
+  public setOptions(options: VconOptions, override: boolean): VconNormalizedOptions {
+    if (override) return (this._options = normalizeSourceOptions(options));
+
+    return Object.assign(this._options, options);
+  }
+  public getOptions(): VconNormalizedOptions {
+    return this._options;
+  }
+  public addExtension(extension: string | string[]): string[] {
+    const exts = Array.isArray(extension) ? extension : [extension];
+
+    this._options.ext.push(...exts);
+    return this._options.ext;
+  }
   static extend<P>(
     props: P &
       Record<any, any> & {

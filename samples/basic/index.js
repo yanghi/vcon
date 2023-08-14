@@ -30,3 +30,6 @@ assert.equal(vcon.has('app.foo'), true, `vcon.has() return correct value`);
 assert.equal(typeof vcon.getArgs()._, 'object', `vcon.getArgs() return correct arguments`);
 
 assert.equal(vcon.get('app.missed'), 'miss', `fill default value if filed missed`);
+
+assert(vcon.addExtension('.js').includes('.js'));
+assert.deepEqual(vcon.setOptions({ ext: ['.js', '.ts'] }, true).ext, ['.js', '.ts'], 'options should be overridden');
