@@ -34,7 +34,7 @@ export interface AddConfigOptions {
   ext?: string[];
 }
 
-export interface VConSource extends VconParseResult {
+export interface VconSource extends VconParseResult {
   options: SingleSourceOptions;
 }
 
@@ -115,8 +115,8 @@ export class Vcon {
   has(path: string): boolean {
     return dotProp(this._configSources[0]?.config, path).has;
   }
-  private _configSources: VConSource[] = [];
-  getAllConfigSources(): VConSource[] {
+  private _configSources: VconSource[] = [];
+  getAllConfigSources(): VconSource[] {
     return this._configSources;
   }
   load() {

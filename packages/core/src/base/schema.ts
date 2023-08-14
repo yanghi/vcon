@@ -10,7 +10,7 @@ type SchemaArray = Array<SchemaValue>;
 
 type SchemaValue = string | number | boolean | SchemaArray | SchemaObject | null;
 
-export interface JSONSchema extends VConSchemaExtend {
+export interface JSONSchema extends VconSchemaExtend {
   type?: PropertyType | PropertyType[];
   properties?: Record<string, JSONSchema>;
   required?: string[] | boolean;
@@ -38,7 +38,7 @@ export interface ValueSource {
 
 type ValueSourceName = 'env' | 'command';
 
-export interface VConSchemaExtend {
+export interface VconSchemaExtend {
   // source?: ValueSourceName | ValueSource
 }
 
