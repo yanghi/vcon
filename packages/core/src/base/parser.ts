@@ -5,7 +5,9 @@ export interface VconParseResult {
 
 export interface VconParseMeta extends VconLoadMeta {}
 
-export interface VconParser {
-  readonly name: string;
-  parse(content: VconLoadResult, result: VconParseResult | undefined, meta: VconParseMeta): VconParseResult | void;
+export abstract class VconParser {
+  readonly name?: string;
+  parse(loaded: VconLoadResult, result: VconParseResult | undefined, meta: VconParseMeta): VconParseResult | void {
+    throw new Error('Must override parse() method');
+  }
 }

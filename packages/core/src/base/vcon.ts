@@ -76,7 +76,15 @@ export class Vcon {
     Object.assign(this.prototype, props);
   }
   addParser(parser: VconParser) {
-    const name = parser.name;
+    let name = parser.name;
+
+    if (!name) {
+      const proto = Object.getPrototypeOf(parser);
+      name = proto.constructor.name;
+    }
+    if (!name) {
+      throw new Error(`Must provide a name property for the parser`);
+    }
 
     this._parsers.set(name, parser);
   }
