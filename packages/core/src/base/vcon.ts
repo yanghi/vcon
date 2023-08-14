@@ -58,6 +58,18 @@ export class Vcon {
     if (Array.isArray(initHooks)) {
       initHooks.forEach((hook) => hook.call(this, this._options));
     }
+
+    if (process.env.NODE_ENV == 'development') {
+      ['setOptions', 'addExtension', 'addParser', 'addLoader', 'addPlugin', 'setSchema'].forEach((fnName) => {
+        const originFn = this[fnName].bind(this);
+        this[fnName] = function (...args: any[]) {
+          if (this._load) {
+            console.warn(`should call ${fnName}() before vcon.load(), it will not take effect.`);
+          }
+          originFn(...args);
+        };
+      });
+    }
   }
   public setOptions(options: VconOptions, override: boolean): VconNormalizedOptions {
     if (override) return (this._options = normalizeSourceOptions(options));
