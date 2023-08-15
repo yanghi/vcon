@@ -122,10 +122,12 @@ export class Vcon {
     const name = plugin.name;
     this._plugins.set(name, plugin);
   }
-  addConfig(path: string, options: SourceOptions | string[] = {}) {
+  addConfig(path: string, groups?: string | string[]): void;
+  addConfig(path: string, options?: SourceOptions): void;
+  addConfig(path: string, options?: SourceOptions | string[] | string) {
     const normalizedOptions: NormalizedSourceOptions = {
       path,
-      ...(Array.isArray(options) ? { ext: options } : options),
+      ...(Array.isArray(options) ? { groups: options } : typeof options === 'string' ? { groups: [options] } : options),
     } as any;
 
     if (!normalizedOptions.ext) {
@@ -153,14 +155,57 @@ export class Vcon {
   getAllConfigSources(): VconSource[] {
     return this._configSources;
   }
-  load() {
+  private _getLoadSourceOptions(group?: LoadOptions['group']): NormalizedSourceOptions[] {
+    if (!group || !group.length) return this._sourceOptions;
+    const groups = Array.isArray(group) ? group : [group];
+
+    const orderGroupsTuple: Array<[string, NormalizedSourceOptions[]]> = groups.map((group) => [group, []]);
+    const namelessGroups: NormalizedSourceOptions[] = [];
+
+    for (let i = 0; i < this._sourceOptions.length; i++) {
+      const singleOptions = this._sourceOptions[i];
+
+      if (singleOptions.groups) {
+        const orderGroup = orderGroupsTuple.find((groupOrderOption) =>
+          singleOptions.groups.includes(groupOrderOption[0]),
+        );
+
+        if (orderGroup) {
+          orderGroup[1].push(singleOptions);
+        }
+      } else {
+        namelessGroups.push(singleOptions);
+      }
+    }
+
+    return orderGroupsTuple
+      .reduce((prev, ordered) => prev.concat(ordered[1]), [] as NormalizedSourceOptions[])
+      .concat(namelessGroups);
+  }
+  load(group?: string | string[]): void;
+  load(options?: LoadOptions): void;
+  load(groupOrOptions: LoadOptions | string | string[]) {
     if (this._load) return;
 
     this._load = true;
 
     this._setupPlugins();
+    const options =
+      Array.isArray(groupOrOptions) || typeof groupOrOptions === 'string'
+        ? { group: groupOrOptions }
+        : groupOrOptions || {};
 
-    this._sourceOptions.forEach((options) => {
+    const { group } = options;
+
+    const sourceOptions = this._getLoadSourceOptions(group);
+
+    const loadedSourceOptions: NormalizedSourceOptions[] = [];
+
+    sourceOptions.forEach((options) => {
+      if (loadedSourceOptions.includes(options)) return;
+
+      loadedSourceOptions.push(options);
+
       normalizeToSingleSourceOptions(options).forEach((singleOpts) => {
         let loadResult: any;
         for (const [_, loader] of this._loaders) {
@@ -223,4 +268,8 @@ export class Vcon {
   setSchema(schema: VconSchema) {
     this._schema = schema;
   }
+}
+
+interface LoadOptions {
+  group?: string | string[];
 }

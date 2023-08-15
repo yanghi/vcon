@@ -2,7 +2,7 @@
   "name": "@vcon/group-sample",
   "private":true,
   "scripts": {
-    "test:sample": "node index.js --type dev && node index.js --type prod",
+    "test:sample": "node index.js --type dev && node index.js --type prod && node index.js --type default && node index.js",
     "test": "pnpm test:sample"
   },
   "dependencies": {

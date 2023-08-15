@@ -5,9 +5,12 @@ export interface NormalizedSourceOptions {
   ext: string[];
   path: string;
   sourceType: SourceType;
+  groups?: string[];
 }
 
-export interface SourceOptions extends Partial<Omit<NormalizedSourceOptions, 'sourceType'>> {}
+export interface SourceOptions extends Partial<Omit<NormalizedSourceOptions, 'sourceType' | 'groups'>> {
+  group?: string | string[];
+}
 
 export interface SingleSourceOptions extends Omit<NormalizedSourceOptions, 'ext'> {
   ext: string;
