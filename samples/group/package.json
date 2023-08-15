@@ -1,0 +1,12 @@
+{
+  "name": "@vcon/group-sample",
+  "private":true,
+  "scripts": {
+    "test:sample": "node index.js --type dev && node index.js --type prod",
+    "test": "pnpm test:sample"
+  },
+  "dependencies": {
+    "vcon": "workspace:*"
+  },
+  "license": "MIT"
+}
