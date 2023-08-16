@@ -83,7 +83,7 @@ vcon.addConfig('path/to/project.default');
 vcon.addConfig('path/to/project');
 ```
 
-How to disable group suffix?
+**How to disable group suffix?**
 
 there has two way:
 
@@ -92,7 +92,7 @@ there has two way:
 vcon.addConfig(path, { groupSuffix: false });
 
 // disable all
-vcon({ group: ['group'], groupSuffix: false });
+vcon.load({ group: ['group'], groupSuffix: false });
 ```
 
 ## Schema
