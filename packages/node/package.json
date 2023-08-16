@@ -1,6 +1,6 @@
 {
   "name": "@vcon/node",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -12,13 +12,17 @@
   },
   "dependencies": {
     "@types/minimist": "^1.2.2",
-    "@vcon/core": "1.1.0",
+    "@vcon/core": "1.2.0",
     "minimist": "^1.2.8"
   },
   "devDependencies": {
     "@types/node": "18.16.12"
   },
   "author": "Yang Hai <yanghi-x@outlook.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yanghi/vcon.git"
+  },
   "keywords": [
     "config",
     "node config",

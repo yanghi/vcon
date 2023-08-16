@@ -1,6 +1,6 @@
 {
   "name": "@vcon/core",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "@vcon/core",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,6 +16,10 @@
     "typescript": "^5.1.6"
   },
   "author": "Yang Hai <yanghi-x@outlook.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yanghi/vcon.git"
+  },
   "keywords": [
     "config",
     "node config",
