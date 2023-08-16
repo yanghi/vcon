@@ -45,6 +45,56 @@ console.log('get app.prefixs', vcon.get('app.prefixs'));
 console.log('has app.foo', vcon.has('app.foo'));
 ```
 
+## Configuration Group
+
+Vcon allows add a configuration source to one or more groups sources, and you can decide which groups will be used as available configuration sources when call `vcon.load()`.
+
+If the configuration file does not exist for the specified group, it will try to load the unnamed group.
+
+Anyway, Only the first matching valid configuration file will be used as the configuration source
+
+```ts
+vcon.addConfig('path/to/project', 'default');
+// it's same as above
+vcon.addConfig('path/to/project', { group: 'default' });
+
+vcon.addConfig('other/path/project', 'default');
+vcon.addConfig('path/to/name', ['development', 'production']);
+
+// unnamed group
+vcon.addConfig('path/to/unnamed-group');
+
+// load which group dependends on process.env.NODE_ENV
+vcon.load(process.env.NODE_ENV);
+
+// can also pass an array,The default group will be load when no configuration is found for process.env.NODE_ENV group
+vcon.load([process.env.NODE_ENV, 'default']);
+
+// load unnamed group
+vcon.load();
+```
+
+By default, the name of the group can be loaded as the suffix of the file name.
+
+`vcon.addConfig('path/to/project', 'default')` has the same effect as the following code:
+
+```ts
+vcon.addConfig('path/to/project.default');
+vcon.addConfig('path/to/project');
+```
+
+How to disable group suffix?
+
+there has two way:
+
+```ts
+// disable single group
+vcon.addConfig(path, { groupSuffix: false });
+
+// disable all
+vcon({ group: ['group'], groupSuffix: false });
+```
+
 ## Schema
 
 Vcon implemented some basically features of json-schema for verification.

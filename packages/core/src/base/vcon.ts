@@ -130,6 +130,10 @@ export class Vcon {
       ...(Array.isArray(options) ? { groups: options } : typeof options === 'string' ? { groups: [options] } : options),
     } as any;
 
+    if (normalizedOptions.groupSuffix === undefined) {
+      normalizedOptions.groupSuffix = true;
+    }
+
     if (!normalizedOptions.ext) {
       normalizedOptions.ext = this._options.ext;
     }
@@ -201,12 +205,17 @@ export class Vcon {
 
     const loadedSourceOptions: NormalizedSourceOptions[] = [];
 
+    const overwriteOptions: (opts: NormalizedSourceOptions) => NormalizedSourceOptions =
+      options.groupSuffix === undefined
+        ? (opt) => opt
+        : (opt) => Object.assign({}, opt, { groupSuffix: options.groupSuffix });
+
     sourceOptions.forEach((options) => {
       if (loadedSourceOptions.includes(options)) return;
 
       loadedSourceOptions.push(options);
 
-      normalizeToSingleSourceOptions(options).forEach((singleOpts) => {
+      normalizeToSingleSourceOptions(overwriteOptions(options)).forEach((singleOpts) => {
         let loadResult: any;
         for (const [_, loader] of this._loaders) {
           try {
@@ -272,4 +281,5 @@ export class Vcon {
 
 interface LoadOptions {
   group?: string | string[];
+  groupSuffix?: boolean;
 }

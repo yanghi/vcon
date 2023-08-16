@@ -61,3 +61,8 @@ export function duplicatesElements<T>(array: T[]): T[] {
   }
   return result;
 }
+
+export function withDot(str: string) {
+  if (str[0] === '.') return str;
+  return '.' + str;
+}

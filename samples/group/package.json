@@ -2,8 +2,9 @@
   "name": "@vcon/group-sample",
   "private":true,
   "scripts": {
-    "test:sample": "node index.js --type dev && node index.js --type prod && node index.js --type default && node index.js",
-    "test": "pnpm test:sample"
+    "test:base": "node index.js --type dev && node index.js --type prod && node index.js --type default && node index.js",
+    "test:suffix": "node suffix.js --type dev && node suffix.js --type prod && node suffix.js --type default && node suffix.js",
+    "test": "pnpm test:sample & pnpm test:suffix"
   },
   "dependencies": {
     "vcon": "workspace:*"
