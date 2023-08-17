@@ -13,19 +13,20 @@ import { walkSchema } from './schema';
 
 export interface VconNormalizedOptions {
   ext: string[];
+  /**
+   * Exit the process when no configuration is found, default is `true`
+   */
+  noConfigExit?: boolean;
 }
 
 export interface VconOptions extends Partial<VconNormalizedOptions> {}
 
-const defaults: Partial<VconNormalizedOptions> = {
+const defaults: VconNormalizedOptions = {
   ext: ['.json', '.yaml', '.yml'],
 };
 
-function normalizeSourceOptions(options: VconOptions): VconNormalizedOptions {
-  const normalizedOptions: VconNormalizedOptions = options as VconNormalizedOptions;
-  if (!normalizedOptions.ext) {
-    normalizedOptions.ext = defaults.ext;
-  }
+function normalizeOptions(options: VconOptions): VconNormalizedOptions {
+  const normalizedOptions: VconNormalizedOptions = Object.assign({}, defaults, options);
 
   return normalizedOptions;
 }
@@ -51,7 +52,7 @@ export class Vcon {
 
   private __init_hooks__?: Function[];
   constructor(options: VconOptions = {}) {
-    this._options = normalizeSourceOptions(options);
+    this._options = normalizeOptions(options);
 
     const initHooks = Object.getPrototypeOf(this).__init_hooks__;
 
@@ -72,7 +73,7 @@ export class Vcon {
     }
   }
   public setOptions(options: VconOptions, override: boolean): VconNormalizedOptions {
-    if (override) return (this._options = normalizeSourceOptions(options));
+    if (override) return (this._options = normalizeOptions(options));
 
     return Object.assign(this._options, options);
   }
@@ -256,20 +257,25 @@ export class Vcon {
 
     if (this._schema) {
       const { result } = walkSchema(this._schema, dotProp(this._configSources, '0.config').value);
-      if (result === undefined) {
-        console.error(`[vcon error]: exit code =1, No valid config sources`);
+
+      if (this._configSources.length) {
+        this._configSources[0].config = result;
+      } else {
+        this._configSources.push({
+          config: result,
+          options: {
+            sourceType: 'default',
+          } as any,
+        });
+      }
+    }
+
+    if (!this._configSources.length) {
+      if (this._options.noConfigExit) {
+        console.error(`[vcon error]: exit code =1, No config sources found`);
         process.exit(1);
       } else {
-        if (this._configSources.length) {
-          this._configSources[0].config = result;
-        } else {
-          this._configSources.push({
-            config: result,
-            options: {
-              sourceType: 'default',
-            } as any,
-          });
-        }
+        console.error(`[vcon error]: No config sources found`);
       }
     }
   }
