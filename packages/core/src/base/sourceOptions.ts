@@ -21,12 +21,15 @@ export interface SingleSourceOptions extends Omit<NormalizedSourceOptions, 'ext'
   group?: string;
 }
 
-export function normalizeToSingleSourceOptions(options: NormalizedSourceOptions): SingleSourceOptions[] {
+export function normalizeToSingleSourceOptions(
+  options: NormalizedSourceOptions,
+  allowedExts: string[],
+): SingleSourceOptions[] {
   let result: SingleSourceOptions[] = [];
 
   const extname = path.extname(options.path);
 
-  if (extname) {
+  if (extname && allowedExts.includes(extname)) {
     return (result = [Object.assign(options, { ext: extname, sourceType: 'fs' })]);
   } else if (options.groups && options.groupSuffix) {
     for (let i = 0; i < options.groups.length; i++) {

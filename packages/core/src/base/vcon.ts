@@ -215,7 +215,7 @@ export class Vcon {
 
       loadedSourceOptions.push(options);
 
-      normalizeToSingleSourceOptions(overwriteOptions(options)).forEach((singleOpts) => {
+      normalizeToSingleSourceOptions(overwriteOptions(options), this._options.ext).forEach((singleOpts) => {
         let loadResult: any;
         for (const [_, loader] of this._loaders) {
           try {
