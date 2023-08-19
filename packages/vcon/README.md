@@ -70,7 +70,7 @@ vcon.load(process.env.NODE_ENV);
 // can also pass an array,The default group will be load when no configuration is found for process.env.NODE_ENV group
 vcon.load([process.env.NODE_ENV, 'default']);
 
-// load unnamed group
+// try load all
 vcon.load();
 ```
 
