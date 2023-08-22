@@ -97,10 +97,6 @@ vcon.addConfig(path, { groupSuffix: false });
 vcon.load({ group: ['group'], groupSuffix: false });
 ```
 
-=======
-
-> > > > > > > transform
-
 ## Schema
 
 Vcon implemented some basically features of json-schema for verification.
@@ -141,6 +137,26 @@ type SchemaObject = {
 };
 
 type SchemaArray = Array<SchemaValue>;
+```
+
+## Additional Schema Definition
+
+**tranform**
+
+When the value is of an unexpected type, tranform will be used to convert the value.
+
+if `tranform` set is `true`,will use transformers that may convert the corresponding type will be used.
+
+```js
+vcon.setSchema({
+  type: 'object',
+  properties: {
+    port: {
+      type: 'integer',
+      transform: true,
+    },
+  },
+});
 ```
 
 ## Supported configuration file extensions
