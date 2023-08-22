@@ -45,6 +45,8 @@ console.log('get app.prefixs', vcon.get('app.prefixs'));
 console.log('has app.foo', vcon.has('app.foo'));
 ```
 
+<<<<<<< HEAD
+
 ## Configuration Group
 
 Vcon allows add a configuration source to one or more groups sources, and you can decide which groups will be used as available configuration sources when call `vcon.load()`.
@@ -94,6 +96,10 @@ vcon.addConfig(path, { groupSuffix: false });
 // disable all
 vcon.load({ group: ['group'], groupSuffix: false });
 ```
+
+=======
+
+> > > > > > > transform
 
 ## Schema
 

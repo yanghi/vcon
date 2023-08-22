@@ -43,7 +43,7 @@ importers:
         specifier: ^1.2.2
         version: 1.2.2
       '@vcon/core':
-        specifier: 1.1.0
+        specifier: 1.2.2
         version: link:../core
       minimist:
         specifier: ^1.2.8
@@ -56,10 +56,10 @@ importers:
   packages/vcon:
     dependencies:
       '@vcon/core':
-        specifier: 1.1.0
+        specifier: 1.2.2
         version: link:../core
       '@vcon/node':
-        specifier: 1.1.0
+        specifier: 1.2.2
         version: link:../node
 
   samples/basic:
@@ -69,6 +69,12 @@ importers:
         version: link:../../packages/vcon
 
   samples/group:
+    dependencies:
+      vcon:
+        specifier: workspace:*
+        version: link:../../packages/vcon
+
+  samples/transform:
     dependencies:
       vcon:
         specifier: workspace:*

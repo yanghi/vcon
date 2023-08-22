@@ -1,0 +1,12 @@
+{
+  "name": "@vcon/sample-transform",
+  "version": "0.0.1",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "dependencies": {
+    "vcon": "workspace:*"
+  },
+  "license": "MIT"
+}

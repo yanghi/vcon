@@ -1,0 +1,6 @@
+port: "3000"
+integer: 1.2
+str: 2
+debug: 3
+num: "4"
+orginal: "5"

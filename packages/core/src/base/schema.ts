@@ -1,4 +1,5 @@
 import { duplicatesElements, hasOwnProp, isInteger, isObject, quoteValue, typeOf, uniqueArray } from '../utils';
+import { TransformType, transform } from './transform';
 
 export type PropertyType = 'object' | 'array' | 'string' | 'boolean' | 'number' | 'null' | 'integer';
 
@@ -10,7 +11,7 @@ type SchemaArray = Array<SchemaValue>;
 
 type SchemaValue = string | number | boolean | SchemaArray | SchemaObject | null;
 
-export interface JSONSchema extends VconSchemaExtend {
+export interface JSONSchema extends VConSchemaExtend {
   type?: PropertyType | PropertyType[];
   properties?: Record<string, JSONSchema>;
   required?: string[] | boolean;
@@ -38,8 +39,9 @@ export interface ValueSource {
 
 type ValueSourceName = 'env' | 'command';
 
-export interface VconSchemaExtend {
+export interface VConSchemaExtend {
   // source?: ValueSourceName | ValueSource
+  transform?: TransformType;
 }
 
 export type VconSchema = Record<string, JSONSchema> | JSONSchema;
@@ -153,7 +155,20 @@ function walk(
   }
 
   if (checkType) {
-    const validateTypeRes = validateSchemaType(currentName, schema, schemaValue);
+    let validateTypeRes = validateSchemaType(currentName, schema, schemaValue);
+
+    if (validateTypeRes[1] && schema.transform) {
+      const transformResult = transform({ value: schemaValue, type: schema.type }, schema.transform);
+
+      if (transformResult.transformed) {
+        validateTypeRes = validateSchemaType(name, schema, transformResult.value);
+
+        if (!validateTypeRes[1]) {
+          schemaValue = transformResult.value;
+        }
+      }
+      scheduler.error.add(name, transformResult.errors);
+    }
 
     scheduler.error.add(name, validateTypeRes[1]);
     inspectType = validateTypeRes[0];
