@@ -1,0 +1,9 @@
+{
+  oneOf: {
+    array: [1, {
+      age: 2
+    }],
+    stringOrArray: "3",
+    stringOrArray_2: ["2"],
+  }
+}

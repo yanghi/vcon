@@ -1,0 +1,12 @@
+{
+  "name": "@vcon/sample-schema",
+  "version": "0.0.1",
+  "main": "index.js",
+  "scripts": {
+    "test:sample": "node index.js"
+  },
+  "dependencies": {
+    "vcon": "workspace:*"
+  },
+  "license": "MIT"
+}

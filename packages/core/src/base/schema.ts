@@ -30,6 +30,7 @@ export interface JSONSchema extends VConSchemaExtend {
   minItems?: number | undefined;
   uniqueItems?: boolean | undefined;
   pattern?: string | undefined;
+  oneOf?: JSONSchema | JSONSchema[];
 }
 
 export interface ValueSource {
@@ -212,10 +213,41 @@ function walk(
     }
   } else if (inspectType === 'array') {
     if (schema.items && schemaValue) {
+      const oneOfArr = schema.items.oneOf
+        ? Array.isArray(schema.items.oneOf)
+          ? schema.items.oneOf
+          : [schema.items.oneOf]
+        : [];
+
       for (let i = 0; i < schemaValue.length; i++) {
-        walk(scheduler, schema.items, schemaValue[i], namePath(name, i, true), (value) => {
+        const itemPath = namePath(name, i, true);
+        walk(scheduler, schema.items, schemaValue[i], itemPath, (value) => {
           schemaValue[i] = value;
         });
+
+        if (oneOfArr.length) {
+          let oneOfExpected = false;
+
+          for (let j = 0; j < oneOfArr.length; j++) {
+            const oneOfSchema = oneOfArr[j];
+            const oneOfErrorCollection = new ErrorCollection();
+
+            walk({ error: oneOfErrorCollection }, oneOfSchema, schemaValue[i], itemPath, () => {});
+
+            oneOfExpected = !oneOfErrorCollection.size;
+
+            if (oneOfExpected) {
+              break;
+            }
+          }
+
+          if (!oneOfExpected) {
+            scheduler.error.add(
+              itemPath,
+              new Error(`Must be valid against exactly one of the subschemas: \n${JSON.stringify(schema.items.oneOf)}`),
+            );
+          }
+        }
       }
       if (schema.minItems && schemaValue.length < schema.minItems) {
         addError('There must be a minimum of ' + schema.minItems + ' in the array');
@@ -268,6 +300,40 @@ function walk(
       }
     }
   }
+
+  if (inspectType !== 'array') {
+    if (schema.oneOf) {
+      const oneOfArr = schema.items.oneOf
+        ? Array.isArray(schema.items.oneOf)
+          ? schema.items.oneOf
+          : [schema.items.oneOf]
+        : [];
+
+      if (oneOfArr.length) {
+        let oneOfExpected = false;
+
+        for (let j = 0; j < oneOfArr.length; j++) {
+          const oneOfSchema = oneOfArr[j];
+          const oneOfErrorCollection = new ErrorCollection();
+
+          walk({ error: oneOfErrorCollection }, oneOfSchema, schemaValue, name, () => {});
+
+          oneOfExpected = !oneOfErrorCollection.size;
+
+          if (oneOfExpected) {
+            break;
+          }
+        }
+
+        if (!oneOfExpected) {
+          scheduler.error.add(
+            name,
+            new Error(`Must be valid against exactly one of the subschemas: \n${JSON.stringify(schema.items.oneOf)}`),
+          );
+        }
+      }
+    }
+  }
 }
 
 interface SchemaScheduler {
@@ -312,6 +378,12 @@ class ErrorCollection {
         }
       }
     }
+  }
+  values() {
+    return this.errors.values();
+  }
+  get(name: string) {
+    return this.errors.get(name);
   }
 }
 
