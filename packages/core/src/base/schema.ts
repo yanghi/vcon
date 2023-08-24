@@ -31,6 +31,7 @@ export interface JSONSchema extends VConSchemaExtend {
   uniqueItems?: boolean | undefined;
   pattern?: string | undefined;
   oneOf?: JSONSchema | JSONSchema[];
+  not?: JSONSchema | JSONSchema[];
 }
 
 export interface ValueSource {
@@ -257,7 +258,7 @@ function walk(
       }
       if (schema.uniqueItems) {
         const duplicates = duplicatesElements(schemaValue);
-        console.log('Duplicates', duplicates);
+
         if (duplicates.length) {
           addError(`Duplicates items, duplicated items: ${quoteValue(duplicates)}`);
         }
