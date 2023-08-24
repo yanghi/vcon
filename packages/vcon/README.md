@@ -107,7 +107,7 @@ The supported features table below:
 | -------------------- | ------------------------------------- | ---------------------------------------------- |
 | type                 | `PropertyType \| Array<PropertyType>` | Defines the data type                          |
 | properties           | `Record<string, JSONSchema>`          | Specifies the object's properties              |
-| required             | `Array<string>\|boolean`              | Lists the required properties                  |
+| required             | `Array<string> \| boolean`            | Lists the required properties                  |
 | items                | `JSONSchema`                          | Defines the schema of items                    |
 | additionalProperties | `boolean`                             | Specifies if additional properties are allowed |
 | default              | `SchemaValue`                         | Specifies the default value                    |
@@ -122,6 +122,7 @@ The supported features table below:
 | minItems             | `Integer`                             | Defines the minimum number of items            |
 | uniqueItems          | `boolean`                             | Indicates if array items must be unique        |
 | pattern              | `string`                              | Specifies a regular expression pattern         |
+| oneOf                | `JSONSchema` \| Array<JSONSchema>     | Must be valid against exactly one of subschema |
 
 Related type definitions
 
