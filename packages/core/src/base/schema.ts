@@ -30,7 +30,7 @@ export interface JSONSchema extends VConSchemaExtend {
   minItems?: number | undefined;
   uniqueItems?: boolean | undefined;
   pattern?: string | undefined;
-  anyOf?: JSONSchema | JSONSchema[];
+  anyOf?: JSONSchema[];
   not?: JSONSchema[];
 }
 
@@ -214,11 +214,7 @@ function walk(
     }
   } else if (inspectType === 'array') {
     if (schema.items && schemaValue) {
-      const anyOfArr = schema.items.anyOf
-        ? Array.isArray(schema.items.anyOf)
-          ? schema.items.anyOf
-          : [schema.items.anyOf]
-        : [];
+      const anyOfArr = schema.items.anyOf || [];
 
       const notArr = schema.not || [];
 
@@ -329,7 +325,7 @@ function walk(
 
   if (inspectType !== 'array') {
     if (schema.anyOf) {
-      const anyOfArr = schema.anyOf ? (Array.isArray(schema.anyOf) ? schema.anyOf : [schema.anyOf]) : [];
+      const anyOfArr = schema.anyOf || [];
 
       if (anyOfArr.length) {
         let anyOfExpected = false;
