@@ -1,7 +1,7 @@
 import { duplicatesElements, hasOwnProp, isInteger, isObject, quoteValue, typeOf, uniqueArray } from '../utils';
 import { TransformType, transform } from './transform';
 
-export type PropertyType = 'object' | 'array' | 'string' | 'boolean' | 'number' | 'null' | 'integer';
+export type PropertyType = 'object' | 'array' | 'string' | 'boolean' | 'number' | 'null' | 'integer' | 'any';
 
 type SchemaObject = {
   [x: string]: SchemaValue;
@@ -30,8 +30,8 @@ export interface JSONSchema extends VConSchemaExtend {
   minItems?: number | undefined;
   uniqueItems?: boolean | undefined;
   pattern?: string | undefined;
-  oneOf?: JSONSchema | JSONSchema[];
-  not?: JSONSchema | JSONSchema[];
+  anyOf?: JSONSchema | JSONSchema[];
+  not?: JSONSchema[];
 }
 
 export interface ValueSource {
@@ -65,7 +65,7 @@ function validateSchemaType(
   schema: JSONSchema,
   schemaValue: any,
 ): [PropertyType | undefined, Error | undefined] {
-  if (!schema.type) return [undefined, undefined];
+  if (!schema.type || schema.type == 'any') return ['any', undefined];
 
   let type = typeOf(schemaValue);
   if (typeof schema.type === 'string') {
@@ -214,11 +214,13 @@ function walk(
     }
   } else if (inspectType === 'array') {
     if (schema.items && schemaValue) {
-      const oneOfArr = schema.items.oneOf
-        ? Array.isArray(schema.items.oneOf)
-          ? schema.items.oneOf
-          : [schema.items.oneOf]
+      const anyOfArr = schema.items.anyOf
+        ? Array.isArray(schema.items.anyOf)
+          ? schema.items.anyOf
+          : [schema.items.anyOf]
         : [];
+
+      const notArr = schema.not || [];
 
       for (let i = 0; i < schemaValue.length; i++) {
         const itemPath = namePath(name, i, true);
@@ -226,26 +228,49 @@ function walk(
           schemaValue[i] = value;
         });
 
-        if (oneOfArr.length) {
-          let oneOfExpected = false;
+        if (anyOfArr.length) {
+          let anyOfExpected = false;
 
-          for (let j = 0; j < oneOfArr.length; j++) {
-            const oneOfSchema = oneOfArr[j];
-            const oneOfErrorCollection = new ErrorCollection();
+          for (let j = 0; j < anyOfArr.length; j++) {
+            const anyOfSchema = anyOfArr[j];
+            const anyOfErrorCollection = new ErrorCollection();
 
-            walk({ error: oneOfErrorCollection }, oneOfSchema, schemaValue[i], itemPath, () => {});
+            walk({ error: anyOfErrorCollection }, anyOfSchema, schemaValue[i], itemPath, () => {});
 
-            oneOfExpected = !oneOfErrorCollection.size;
+            anyOfExpected = !anyOfErrorCollection.size;
 
-            if (oneOfExpected) {
+            if (anyOfExpected) {
               break;
             }
           }
 
-          if (!oneOfExpected) {
+          if (!anyOfExpected) {
             scheduler.error.add(
               itemPath,
-              new Error(`Must be valid against exactly one of the subschemas: \n${JSON.stringify(schema.items.oneOf)}`),
+              new Error(`Must be valid against exactly one of the subschemas: \n${JSON.stringify(schema.items.anyOf)}`),
+            );
+          }
+        }
+
+        if (notArr.length > 0) {
+          let expected = true;
+          for (let j = 0; j < notArr.length; j++) {
+            const notSchema = notArr[j];
+            const errorCollection = new ErrorCollection();
+
+            walk({ error: errorCollection }, notSchema, schemaValue, name, () => {});
+
+            expected = errorCollection.size > 0;
+
+            if (!expected) {
+              break;
+            }
+          }
+
+          if (!expected) {
+            scheduler.error.add(
+              name,
+              new Error(`Value does not validate against "not" schema.: \n${JSON.stringify(schema.items.not)}`),
             );
           }
         }
@@ -303,33 +328,55 @@ function walk(
   }
 
   if (inspectType !== 'array') {
-    if (schema.oneOf) {
-      const oneOfArr = schema.items.oneOf
-        ? Array.isArray(schema.items.oneOf)
-          ? schema.items.oneOf
-          : [schema.items.oneOf]
-        : [];
+    if (schema.anyOf) {
+      const anyOfArr = schema.anyOf ? (Array.isArray(schema.anyOf) ? schema.anyOf : [schema.anyOf]) : [];
 
-      if (oneOfArr.length) {
-        let oneOfExpected = false;
+      if (anyOfArr.length) {
+        let anyOfExpected = false;
 
-        for (let j = 0; j < oneOfArr.length; j++) {
-          const oneOfSchema = oneOfArr[j];
-          const oneOfErrorCollection = new ErrorCollection();
+        for (let j = 0; j < anyOfArr.length; j++) {
+          const anyOfSchema = anyOfArr[j];
+          const anyOfErrorCollection = new ErrorCollection();
 
-          walk({ error: oneOfErrorCollection }, oneOfSchema, schemaValue, name, () => {});
+          walk({ error: anyOfErrorCollection }, anyOfSchema, schemaValue, name, () => {});
 
-          oneOfExpected = !oneOfErrorCollection.size;
+          anyOfExpected = !anyOfErrorCollection.size;
 
-          if (oneOfExpected) {
+          if (anyOfExpected) {
             break;
           }
         }
 
-        if (!oneOfExpected) {
+        if (!anyOfExpected) {
           scheduler.error.add(
             name,
-            new Error(`Must be valid against exactly one of the subschemas: \n${JSON.stringify(schema.items.oneOf)}`),
+            new Error(`Must be valid against exactly one of the subschemas: \n${JSON.stringify(schema.items.anyOf)}`),
+          );
+        }
+      }
+    }
+
+    if (schema.not) {
+      const notArr = schema.not;
+      let expected = true;
+      if (notArr.length > 0) {
+        for (let j = 0; j < notArr.length; j++) {
+          const notSchema = notArr[j];
+          const errorCollection = new ErrorCollection();
+
+          walk({ error: errorCollection }, notSchema, schemaValue, name, () => {});
+
+          expected = errorCollection.size > 0;
+
+          if (!expected) {
+            break;
+          }
+        }
+
+        if (!expected) {
+          scheduler.error.add(
+            name,
+            new Error(`Value does not validate against "not" schema.: \n${JSON.stringify(schema.not)}`),
           );
         }
       }

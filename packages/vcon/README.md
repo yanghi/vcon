@@ -123,6 +123,7 @@ The supported features table below:
 | uniqueItems          | `boolean`                             | Indicates if array items must be unique        |
 | pattern              | `string`                              | Specifies a regular expression pattern         |
 | oneOf                | `JSONSchema` \| Array<JSONSchema>     | Must be valid against exactly one of subschema |
+| not                  | Array<JSONSchema>                     | Defines undesired rules                        |
 
 Related type definitions
 

@@ -6,9 +6,9 @@
     stringOrArray: "3",
     stringOrArray_2: ["2"],
   },
-  not: {
-    str: 2,
-    num: "foo",
-    numArray: ["a","b","c"],
+  not:{
+    str: "foo",
+    num: 1,
+    numArray: [1,2],
   }
 }

@@ -1,6 +1,10 @@
 const vcon = require('vcon').default;
 
-vcon.addConfig('./configs/pass');
+if (vcon.getArgs().p) {
+  vcon.addConfig('./configs/pass');
+} else {
+  vcon.addConfig('./configs/unpass');
+}
 
 vcon.setSchema({
   properties: {
@@ -41,6 +45,21 @@ vcon.setSchema({
               type: 'array',
             },
           ],
+        },
+      },
+    },
+    not: {
+      properties: {
+        str: {
+          not: [{ type: 'string' }],
+        },
+        num: {
+          not: [{ type: 'number' }],
+        },
+        numArray: {
+          items: {
+            not: [{ type: 'number' }],
+          },
         },
       },
     },
