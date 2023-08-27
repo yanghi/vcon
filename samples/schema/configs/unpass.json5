@@ -1,14 +1,23 @@
 {
-  oneOf: {
-    array: [1, {
-      age: 2
-    }],
-    stringOrArray: "3",
-    stringOrArray_2: ["2"],
+  anyOf: {
+    array: ['a', null],
+    stringOrArray: 2,
+    stringOrArray_2: [3],
   },
   not:{
     str: "foo",
     num: 1,
     numArray: [1,2],
+    numOrStrArr: [11, 'abcd'],
+  },
+  oneOf: {
+    numOrStr: null,
+    numOrStr_2: {},
+    numOrStrArr: [null, []],
+  },
+  allOf:{
+     str: 'abcefg',
+     str_2: 'Abd',
+     strArr: ['Abc','aaaaaaaa']
   }
 }

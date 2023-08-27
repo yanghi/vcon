@@ -8,11 +8,11 @@ if (vcon.getArgs().p) {
 
 vcon.setSchema({
   properties: {
-    oneOf: {
+    anyOf: {
       properties: {
         array: {
           items: {
-            oneOf: [
+            anyOf: [
               {
                 type: 'number',
               },
@@ -27,7 +27,7 @@ vcon.setSchema({
           },
         },
         stringOrArray: {
-          oneOf: [
+          anyOf: [
             {
               type: 'string',
             },
@@ -37,7 +37,7 @@ vcon.setSchema({
           ],
         },
         stringOrArray_2: {
-          oneOf: [
+          anyOf: [
             {
               type: 'string',
             },
@@ -59,6 +59,54 @@ vcon.setSchema({
         numArray: {
           items: {
             not: [{ type: 'number' }],
+          },
+        },
+      },
+    },
+    oneOf: {
+      properties: {
+        numOrStr: {
+          oneOf: [
+            { type: 'string', maxLength: 3 },
+            { type: 'number', maximum: 10 },
+          ],
+        },
+        numOrStr_2: {
+          oneOf: [
+            { type: 'string', maxLength: 3 },
+            { type: 'number', maximum: 10 },
+          ],
+        },
+        numOrStrArr: {
+          items: {
+            oneOf: [
+              { type: 'string', maxLength: 3 },
+              { type: 'number', maximum: 10 },
+            ],
+          },
+        },
+      },
+    },
+    allOf: {
+      properties: {
+        str: {
+          allOf: [
+            { type: 'string', maxLength: 3 },
+            { type: 'string', pattern: '^[a-z]+' },
+          ],
+        },
+        str_2: {
+          allOf: [
+            { type: 'string', maxLength: 3 },
+            { type: 'string', pattern: '^[a-z]+' },
+          ],
+        },
+        strArr: {
+          items: {
+            allOf: [
+              { type: 'string', maxLength: 3 },
+              { type: 'string', pattern: '^[a-z]+' },
+            ],
           },
         },
       },
