@@ -1,0 +1,29 @@
+{
+  anyOf: {
+    array: [1, {
+      age: 2
+    }],
+    stringOrArray: "3",
+    stringOrArray_2: ["2"],
+  },
+  not: {
+    str: 2,
+    num: "foo",
+    numArray: ["a","b","c"],
+  },
+  oneOf: {
+    numOrStr: 'a',
+    numOrStr_2: 2,
+    numOrStrArr: [1, 'a'],
+  },
+  oneOf: {
+    numOrStr: 2,
+    numOrStr_2: 'ab',
+    numOrStrArr: [1, 'a'],
+  },
+  allOf:{
+     str: 'abc',
+     str_2: 'ef',
+     strArr: ['a','bc']
+  }
+}

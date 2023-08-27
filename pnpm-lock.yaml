@@ -74,6 +74,12 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vcon
 
+  samples/schema:
+    dependencies:
+      vcon:
+        specifier: workspace:*
+        version: link:../../packages/vcon
+
   samples/transform:
     dependencies:
       vcon:

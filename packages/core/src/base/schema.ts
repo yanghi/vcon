@@ -1,7 +1,7 @@
 import { duplicatesElements, hasOwnProp, isInteger, isObject, quoteValue, typeOf, uniqueArray } from '../utils';
 import { TransformType, transform } from './transform';
 
-export type PropertyType = 'object' | 'array' | 'string' | 'boolean' | 'number' | 'null' | 'integer';
+export type PropertyType = 'object' | 'array' | 'string' | 'boolean' | 'number' | 'null' | 'integer' | 'any';
 
 type SchemaObject = {
   [x: string]: SchemaValue;
@@ -30,6 +30,10 @@ export interface JSONSchema extends VConSchemaExtend {
   minItems?: number | undefined;
   uniqueItems?: boolean | undefined;
   pattern?: string | undefined;
+  anyOf?: JSONSchema[] | undefined;
+  allOf?: JSONSchema[] | undefined;
+  oneOf?: JSONSchema[] | undefined;
+  not?: JSONSchema[] | undefined;
 }
 
 export interface ValueSource {
@@ -63,7 +67,7 @@ function validateSchemaType(
   schema: JSONSchema,
   schemaValue: any,
 ): [PropertyType | undefined, Error | undefined] {
-  if (!schema.type) return [undefined, undefined];
+  if (!schema.type || schema.type == 'any') return ['any', undefined];
 
   let type = typeOf(schemaValue);
   if (typeof schema.type === 'string') {
@@ -212,10 +216,101 @@ function walk(
     }
   } else if (inspectType === 'array') {
     if (schema.items && schemaValue) {
+      const anyOfArr = schema.items.anyOf || [];
+
+      const notArr = schema.not || [];
+
       for (let i = 0; i < schemaValue.length; i++) {
-        walk(scheduler, schema.items, schemaValue[i], namePath(name, i, true), (value) => {
+        const itemPath = namePath(name, i, true);
+        walk(scheduler, schema.items, schemaValue[i], itemPath, (value) => {
           schemaValue[i] = value;
         });
+
+        if (anyOfArr.length) {
+          let anyOfExpected = false;
+
+          for (let j = 0; j < anyOfArr.length; j++) {
+            const anyOfSchema = anyOfArr[j];
+            const anyOfErrorCollection = new ErrorCollection();
+
+            walk({ error: anyOfErrorCollection }, anyOfSchema, schemaValue[i], itemPath, () => {});
+
+            anyOfExpected = !anyOfErrorCollection.size;
+
+            if (anyOfExpected) {
+              break;
+            }
+          }
+
+          if (!anyOfExpected) {
+            scheduler.error.add(itemPath, new Error(`The value must match at least one of the specified schemas.`));
+          }
+        }
+
+        if (notArr.length > 0) {
+          let expected = true;
+          for (let j = 0; j < notArr.length; j++) {
+            const notSchema = notArr[j];
+            const errorCollection = new ErrorCollection();
+
+            walk({ error: errorCollection }, notSchema, schemaValue, itemPath, () => {});
+
+            expected = errorCollection.size > 0;
+
+            if (!expected) {
+              break;
+            }
+          }
+
+          if (!expected) {
+            scheduler.error.add(name, new Error(`The value must not match the specified schema.`));
+          }
+        }
+
+        const allOf = schema.items.allOf;
+        if (Array.isArray(allOf) && allOf.length) {
+          let expected = true;
+          for (let j = 0; j < allOf.length; j++) {
+            const schemaItem = allOf[j];
+            const errorCollection = new ErrorCollection();
+
+            walk({ error: errorCollection }, schemaItem, schemaValue[i], itemPath, () => {});
+
+            expected = errorCollection.size == 0;
+
+            if (!expected) {
+              break;
+            }
+          }
+
+          if (!expected) {
+            scheduler.error.add(itemPath, new Error(`The value must match all of the specified schemas.`));
+          }
+        }
+
+        const oneOf = schema.items.oneOf;
+        if (Array.isArray(oneOf) && oneOf.length) {
+          let expectedCount = 0;
+
+          for (let j = 0; j < oneOf.length; j++) {
+            const schemaItem = oneOf[j];
+            const errorCollection = new ErrorCollection();
+
+            walk({ error: errorCollection }, schemaItem, schemaValue[i], itemPath, () => {});
+
+            if (!errorCollection.size) {
+              expectedCount++;
+            }
+
+            if (expectedCount > 1) {
+              break;
+            }
+          }
+
+          if (expectedCount != 1) {
+            scheduler.error.add(itemPath, new Error(`The value must match exactly one of the specified schemas.`));
+          }
+        }
       }
       if (schema.minItems && schemaValue.length < schema.minItems) {
         addError('There must be a minimum of ' + schema.minItems + ' in the array');
@@ -225,7 +320,7 @@ function walk(
       }
       if (schema.uniqueItems) {
         const duplicates = duplicatesElements(schemaValue);
-        console.log('Duplicates', duplicates);
+
         if (duplicates.length) {
           addError(`Duplicates items, duplicated items: ${quoteValue(duplicates)}`);
         }
@@ -265,6 +360,101 @@ function walk(
       let matched = schema.enum.find((em) => em === schemaValue);
       if (!matched) {
         addError(`Invalid value, ${quoteValue(schemaValue)} not one of the enumeration ${schema.enum.join(',')}`);
+      }
+    }
+  }
+
+  if (inspectType !== 'array') {
+    if (schema.anyOf) {
+      const anyOfArr = schema.anyOf || [];
+
+      if (anyOfArr.length) {
+        let anyOfExpected = false;
+
+        for (let j = 0; j < anyOfArr.length; j++) {
+          const anyOfSchema = anyOfArr[j];
+          const anyOfErrorCollection = new ErrorCollection();
+
+          walk({ error: anyOfErrorCollection }, anyOfSchema, schemaValue, name, () => {});
+
+          anyOfExpected = !anyOfErrorCollection.size;
+
+          if (anyOfExpected) {
+            break;
+          }
+        }
+
+        if (!anyOfExpected) {
+          scheduler.error.add(name, new Error(`The value must match at least one of the specified schemas.`));
+        }
+      }
+    }
+
+    if (schema.not) {
+      const notArr = schema.not;
+      let expected = true;
+      if (notArr.length > 0) {
+        for (let j = 0; j < notArr.length; j++) {
+          const notSchema = notArr[j];
+          const errorCollection = new ErrorCollection();
+
+          walk({ error: errorCollection }, notSchema, schemaValue, name, () => {});
+
+          expected = errorCollection.size > 0;
+
+          if (!expected) {
+            break;
+          }
+        }
+
+        if (!expected) {
+          addError(`The value must not match the specified schema.`);
+        }
+      }
+    }
+
+    const allOf = schema.allOf;
+    if (Array.isArray(allOf) && allOf.length) {
+      let expected = true;
+      for (let j = 0; j < allOf.length; j++) {
+        const schemaItem = allOf[j];
+        const errorCollection = new ErrorCollection();
+
+        walk({ error: errorCollection }, schemaItem, schemaValue, name, () => {});
+
+        expected = errorCollection.size == 0;
+
+        if (!expected) {
+          break;
+        }
+      }
+
+      if (!expected) {
+        addError(`The value must match all of the specified schemas.`);
+      }
+    }
+
+    const oneOf = schema.oneOf;
+    if (Array.isArray(oneOf) && oneOf.length) {
+      let expectedCount = 0;
+
+      for (let j = 0; j < oneOf.length; j++) {
+        const schemaItem = oneOf[j];
+        const errorCollection = new ErrorCollection();
+
+        walk({ error: errorCollection }, schemaItem, schemaValue, name, () => {});
+
+        if (!errorCollection.size) {
+          expectedCount++;
+        }
+
+        if (expectedCount > 1) {
+          break;
+        }
+      }
+
+      if (expectedCount != 1) {
+        addError(`The value must match exactly one of the specified schemas.`);
       }
     }
   }
@@ -312,6 +502,12 @@ class ErrorCollection {
         }
       }
     }
+  }
+  values() {
+    return this.errors.values();
+  }
+  get(name: string) {
+    return this.errors.get(name);
   }
 }
 
