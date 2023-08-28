@@ -216,101 +216,11 @@ function walk(
     }
   } else if (inspectType === 'array') {
     if (schema.items && schemaValue) {
-      const anyOfArr = schema.items.anyOf || [];
-
-      const notArr = schema.not || [];
-
       for (let i = 0; i < schemaValue.length; i++) {
         const itemPath = namePath(name, i, true);
         walk(scheduler, schema.items, schemaValue[i], itemPath, (value) => {
           schemaValue[i] = value;
         });
-
-        if (anyOfArr.length) {
-          let anyOfExpected = false;
-
-          for (let j = 0; j < anyOfArr.length; j++) {
-            const anyOfSchema = anyOfArr[j];
-            const anyOfErrorCollection = new ErrorCollection();
-
-            walk({ error: anyOfErrorCollection }, anyOfSchema, schemaValue[i], itemPath, () => {});
-
-            anyOfExpected = !anyOfErrorCollection.size;
-
-            if (anyOfExpected) {
-              break;
-            }
-          }
-
-          if (!anyOfExpected) {
-            scheduler.error.add(itemPath, new Error(`The value must match at least one of the specified schemas.`));
-          }
-        }
-
-        if (notArr.length > 0) {
-          let expected = true;
-          for (let j = 0; j < notArr.length; j++) {
-            const notSchema = notArr[j];
-            const errorCollection = new ErrorCollection();
-
-            walk({ error: errorCollection }, notSchema, schemaValue, itemPath, () => {});
-
-            expected = errorCollection.size > 0;
-
-            if (!expected) {
-              break;
-            }
-          }
-
-          if (!expected) {
-            scheduler.error.add(name, new Error(`The value must not match the specified schema.`));
-          }
-        }
-
-        const allOf = schema.items.allOf;
-        if (Array.isArray(allOf) && allOf.length) {
-          let expected = true;
-          for (let j = 0; j < allOf.length; j++) {
-            const schemaItem = allOf[j];
-            const errorCollection = new ErrorCollection();
-
-            walk({ error: errorCollection }, schemaItem, schemaValue[i], itemPath, () => {});
-
-            expected = errorCollection.size == 0;
-
-            if (!expected) {
-              break;
-            }
-          }
-
-          if (!expected) {
-            scheduler.error.add(itemPath, new Error(`The value must match all of the specified schemas.`));
-          }
-        }
-
-        const oneOf = schema.items.oneOf;
-        if (Array.isArray(oneOf) && oneOf.length) {
-          let expectedCount = 0;
-
-          for (let j = 0; j < oneOf.length; j++) {
-            const schemaItem = oneOf[j];
-            const errorCollection = new ErrorCollection();
-
-            walk({ error: errorCollection }, schemaItem, schemaValue[i], itemPath, () => {});
-
-            if (!errorCollection.size) {
-              expectedCount++;
-            }
-
-            if (expectedCount > 1) {
-              break;
-            }
-          }
-
-          if (expectedCount != 1) {
-            scheduler.error.add(itemPath, new Error(`The value must match exactly one of the specified schemas.`));
-          }
-        }
       }
       if (schema.minItems && schemaValue.length < schema.minItems) {
         addError('There must be a minimum of ' + schema.minItems + ' in the array');
