@@ -23,7 +23,7 @@ vcon.setSchema({
 
 vcon.load();
 
-assert.equal(vcon.getAllConfigSources().length, 3, `vcon.getAllConfigSources() should get all sources`);
+assert.equal(vcon.getAllConfigSources().length, 1, `vcon.getAllConfigSources() should get all sources`);
 
 assert.equal(vcon.get('app.foo'), 'foo', `vcon.get() return correct value`);
 assert.equal(vcon.has('app.foo'), true, `vcon.has() return correct value`);

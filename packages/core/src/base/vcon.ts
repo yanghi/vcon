@@ -46,7 +46,7 @@ export class Vcon {
 
   private _sourceOptions: NormalizedSourceOptions[] = [];
 
-  private _load = false;
+  private _loaded = false;
 
   private _options: VconNormalizedOptions;
 
@@ -64,7 +64,7 @@ export class Vcon {
       ['setOptions', 'addExtension', 'addParser', 'addLoader', 'addPlugin', 'setSchema'].forEach((fnName) => {
         const originFn = this[fnName].bind(this);
         this[fnName] = function (...args: any[]) {
-          if (this._load) {
+          if (this._loaded) {
             console.warn(`should call ${fnName}() before vcon.load(), it will not take effect.`);
           }
           originFn(...args);
@@ -187,20 +187,12 @@ export class Vcon {
       .reduce((prev, ordered) => prev.concat(ordered[1]), [] as NormalizedSourceOptions[])
       .concat(namelessGroups);
   }
-  load(group?: string | string[]): void;
-  load(options?: LoadOptions): void;
-  load(groupOrOptions: LoadOptions | string | string[]) {
-    if (this._load) return;
 
-    this._load = true;
-
-    this._setupPlugins();
-    const options =
-      Array.isArray(groupOrOptions) || typeof groupOrOptions === 'string'
-        ? { group: groupOrOptions }
-        : groupOrOptions || {};
+  private _load(options: LoadOptions): VconSource[] {
+    const configSources: VconSource[] = [];
 
     const { group } = options;
+    const race = true;
 
     const sourceOptions = this._getLoadSourceOptions(group);
 
@@ -211,12 +203,18 @@ export class Vcon {
         ? (opt) => opt
         : (opt) => Object.assign({}, opt, { groupSuffix: options.groupSuffix });
 
-    sourceOptions.forEach((options) => {
-      if (loadedSourceOptions.includes(options)) return;
+    for (let i = 0; i < sourceOptions.length; i++) {
+      const options = sourceOptions[i];
+
+      if (loadedSourceOptions.includes(options)) continue;
 
       loadedSourceOptions.push(options);
 
-      normalizeToSingleSourceOptions(overwriteOptions(options), this._options.ext).forEach((singleOpts) => {
+      const singleSourceOptions = normalizeToSingleSourceOptions(overwriteOptions(options), this._options.ext);
+
+      for (let j = 0; j < singleSourceOptions.length; j++) {
+        const singleOpts = singleSourceOptions[j];
+
         let loadResult: any;
         for (const [_, loader] of this._loaders) {
           try {
@@ -236,20 +234,41 @@ export class Vcon {
             const _parseRes = parser.parse(loadResult, parseResult, singleOpts);
             if (_parseRes) {
               parseResult = _parseRes;
+
+              configSources.push({
+                ...parseResult,
+                ...singleOpts,
+              });
+
+              if (race && parseResult) {
+                return configSources;
+              }
             }
           } catch (error) {
             console.error(`${parser.name} parse error`, error);
           }
         }
+      }
+    }
 
-        if (parseResult !== undefined) {
-          this._configSources.push({
-            ...parseResult,
-            options: singleOpts,
-          });
-        }
-      });
-    });
+    return configSources;
+  }
+
+  load(group?: string | string[]): void;
+  load(options?: LoadOptions): void;
+  load(groupOrOptions: LoadOptions | string | string[]) {
+    if (this._loaded) return;
+
+    this._loaded = true;
+
+    this._setupPlugins();
+
+    const options =
+      Array.isArray(groupOrOptions) || typeof groupOrOptions === 'string'
+        ? { group: groupOrOptions }
+        : groupOrOptions || {};
+
+    this._configSources = this._load(options);
 
     if (!this._configSources.length) {
       console.warn(`[vcon warn]: No match any config sources`);
