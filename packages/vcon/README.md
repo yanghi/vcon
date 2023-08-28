@@ -45,8 +45,6 @@ console.log('get app.prefixs', vcon.get('app.prefixs'));
 console.log('has app.foo', vcon.has('app.foo'));
 ```
 
-<<<<<<< HEAD
-
 ## Configuration Group
 
 Vcon allows add a configuration source to one or more groups sources, and you can decide which groups will be used as available configuration sources when call `vcon.load()`.
@@ -131,7 +129,7 @@ Related type definitions
 
 ```ts
 // string of value type
-type PropertyType = 'object' | 'array' | 'string' | 'boolean' | 'number' | 'null' | 'integer';
+type PropertyType = 'object' | 'array' | 'string' | 'boolean' | 'number' | 'null' | 'integer' | 'any';
 
 // value type
 type SchemaValue = string | number | boolean | SchemaArray | SchemaObject | null;
