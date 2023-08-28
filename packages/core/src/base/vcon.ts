@@ -1,4 +1,4 @@
-import { VconSchema } from './schema';
+import { VconSchema, SchemaError } from './schema';
 import { VconParser, VconParseResult } from './parser';
 import { VconLoader } from './loader';
 import {
@@ -17,12 +17,15 @@ export interface VconNormalizedOptions {
    * Exit the process when no configuration is found, default is `true`
    */
   noConfigExit?: boolean;
+  log?: 'error' | 'warning' | boolean;
+  strict?: boolean;
 }
 
 export interface VconOptions extends Partial<VconNormalizedOptions> {}
 
 const defaults: VconNormalizedOptions = {
   ext: ['.json', '.yaml', '.yml'],
+  log: true,
 };
 
 function normalizeOptions(options: VconOptions): VconNormalizedOptions {
@@ -46,7 +49,7 @@ export class Vcon {
 
   private _sourceOptions: NormalizedSourceOptions[] = [];
 
-  private _loaded = false;
+  private _loaded: LoadResult | null = null;
 
   private _options: VconNormalizedOptions;
 
@@ -254,12 +257,14 @@ export class Vcon {
     return configSources;
   }
 
-  load(group?: string | string[]): void;
-  load(options?: LoadOptions): void;
-  load(groupOrOptions: LoadOptions | string | string[]) {
-    if (this._loaded) return;
+  load(group?: string | string[]): LoadResult;
+  load(options?: LoadOptions): LoadResult;
+  load(groupOrOptions: LoadOptions | string | string[]): LoadResult {
+    if (this._loaded) return this._loaded;
 
-    this._loaded = true;
+    const loadResult: LoadResult = {
+      error: [],
+    };
 
     this._setupPlugins();
 
@@ -275,7 +280,16 @@ export class Vcon {
     }
 
     if (this._schema) {
-      const { result } = walkSchema(this._schema, dotProp(this._configSources, '0.config').value);
+      const { result, scheduler } = walkSchema(this._schema, dotProp(this._configSources, '0.config').value, {
+        strict: this._options.strict,
+      });
+
+      const schemaErrors = scheduler.error.errorList();
+
+      if (schemaErrors.length) {
+        this._options.log && scheduler.error.log();
+        loadResult.error.push(...schemaErrors);
+      }
 
       if (this._configSources.length) {
         this._configSources[0].config = result;
@@ -290,18 +304,24 @@ export class Vcon {
     }
 
     if (!this._configSources.length) {
-      if (this._options.noConfigExit) {
+      if (this._options.noConfigExit || this._options.strict) {
         console.error(`[vcon error]: exit code =1, No config sources found`);
         process.exit(1);
       } else {
         console.error(`[vcon error]: No config sources found`);
       }
     }
+
+    return (this._loaded = loadResult);
   }
   private _schema?: VconSchema | undefined;
   setSchema(schema: VconSchema) {
     this._schema = schema;
   }
+}
+
+interface LoadResult {
+  error: SchemaError[];
 }
 
 interface LoadOptions {
