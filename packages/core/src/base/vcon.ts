@@ -38,7 +38,8 @@ export interface AddConfigOptions {
   ext?: string[];
 }
 
-export interface VconSource extends VconParseResult {
+export interface VconSource<Config = any> {
+  config: any;
   options: SingleSourceOptions;
 }
 
@@ -257,13 +258,14 @@ export class Vcon {
     return configSources;
   }
 
-  load(group?: string | string[]): LoadResult;
-  load(options?: LoadOptions): LoadResult;
+  load<Config = any>(group?: string | string[]): LoadResult<Config>;
+  load<Config = any>(options?: LoadOptions): LoadResult<Config>;
   load(groupOrOptions: LoadOptions | string | string[]): LoadResult {
     if (this._loaded) return this._loaded;
 
     const loadResult: LoadResult = {
       error: [],
+      sources: [],
     };
 
     this._setupPlugins();
@@ -273,7 +275,7 @@ export class Vcon {
         ? { group: groupOrOptions }
         : groupOrOptions || {};
 
-    this._configSources = this._load(options);
+    loadResult.sources = this._configSources = this._load(options);
 
     if (!this._configSources.length) {
       console.warn(`[vcon warn]: No match any config sources`);
@@ -320,8 +322,9 @@ export class Vcon {
   }
 }
 
-interface LoadResult {
+interface LoadResult<Config = any> {
   error: SchemaError[];
+  sources: VconSource<Config>[];
 }
 
 interface LoadOptions {

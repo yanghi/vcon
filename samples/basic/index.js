@@ -21,7 +21,7 @@ vcon.setSchema({
   },
 });
 
-vcon.load();
+const { sources } = vcon.load();
 
 assert.equal(vcon.getAllConfigSources().length, 1, `vcon.getAllConfigSources() should get all sources`);
 
@@ -33,3 +33,5 @@ assert.equal(vcon.get('app.missed'), 'miss', `fill default value if filed missed
 
 assert(vcon.addExtension('.js').includes('.js'));
 assert.deepEqual(vcon.setOptions({ ext: ['.js', '.ts'] }, true).ext, ['.js', '.ts'], 'options should be overridden');
+
+assert.equal(sources.length, 1, 'load() should return sources');
