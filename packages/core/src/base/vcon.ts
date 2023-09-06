@@ -241,7 +241,7 @@ export class Vcon {
 
               configSources.push({
                 ...parseResult,
-                ...singleOpts,
+                options: singleOpts,
               });
 
               if (race && parseResult) {
