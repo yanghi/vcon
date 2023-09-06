@@ -1,6 +1,7 @@
 {
   "app": {
-    "foo": "foo"
+    "foo": "foo",
+    "ports": [3000]
   },
   "version": 1
 }

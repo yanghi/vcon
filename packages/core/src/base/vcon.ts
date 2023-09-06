@@ -1,5 +1,5 @@
-import { VconSchema, SchemaError } from './schema';
-import { VconParser, VconParseResult } from './parser';
+import { VconSchema, SchemaError, JSONSchema, findSchemaNodeWithValue } from './schema';
+import { VconParser } from './parser';
 import { VconLoader } from './loader';
 import {
   NormalizedSourceOptions,
@@ -10,6 +10,7 @@ import {
 import { VconPlugin } from './plugin';
 import { dotProp } from '../utils/dotProp';
 import { walkSchema } from './schema';
+import { IError } from './error';
 
 export interface VconNormalizedOptions {
   ext: string[];
@@ -159,6 +160,62 @@ export class Vcon {
   }
   has(path: string): boolean {
     return dotProp(this._configSources[0]?.config, path).has;
+  }
+  set(path: string, value: any, setOptions: SetOptions = {}): { value?: any; errors: IError[] } {
+    const dotPaths = path.split('.');
+    const parentPath = dotPaths.slice(0, dotPaths.length - 1);
+    const parent = dotProp(this._configSources[0]?.config, parentPath);
+
+    if (!parent.has) {
+      return {
+        errors: [new Error(`No configuration item for "${parentPath.join('.')}",so "${path}" cannot be set.`)],
+      };
+    }
+
+    if (this._schema) {
+      const targetSchema = setOptions.schemaPath
+        ? this.getSchema(setOptions.schemaPath)
+        : findSchemaNodeWithValue(this._schema, dotPaths, value);
+
+      if (targetSchema) {
+        const { result, scheduler } = walkSchema(targetSchema, value, {
+          strict: false,
+        });
+
+        if (scheduler.error.size) {
+          const errors = scheduler.error.errorList();
+          setOptions.onError?.(errors);
+
+          return {
+            errors,
+          };
+        }
+
+        parent.value[dotPaths[dotPaths.length - 1]] = result;
+
+        return {
+          value: result,
+          errors: [],
+        };
+      }
+    }
+
+    parent[dotPaths.length - 1] = value;
+
+    return {
+      errors: [],
+      value,
+    };
+  }
+  private getSchema(path: string): JSONSchema | undefined {
+    if (this._schema) {
+      const paths = path.split('/');
+      if (paths[0] === '#') {
+        paths.shift();
+      }
+
+      return dotProp(this._schema, paths).value;
+    }
   }
   private _configSources: VconSource[] = [];
   getAllConfigSources(): VconSource[] {
@@ -349,4 +406,8 @@ interface LoadResult<Config = any> {
 interface LoadOptions {
   group?: string | string[];
   groupSuffix?: boolean;
+}
+export interface SetOptions {
+  schemaPath?: string;
+  onError?: (errs: IError[]) => void;
 }

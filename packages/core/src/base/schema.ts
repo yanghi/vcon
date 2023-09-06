@@ -529,6 +529,62 @@ export function walkSchema(
   };
 }
 
+function matchSchemaTail(schema: JSONSchema, valueType: PropertyType): JSONSchema | void {
+  if (
+    (typeof schema.type === 'string' && valueType == schema.type) ||
+    (Array.isArray(schema.type) && schema.type.includes(valueType)) ||
+    schema.type === undefined ||
+    schema.type === 'any'
+  ) {
+    return schema;
+  }
+}
+
+function findSchemaNode(root: JSONSchema, valuePaths: string[], valueType: PropertyType): JSONSchema | void {
+  if (!valuePaths.length) return root;
+
+  let result: JSONSchema | void;
+  const childPaths = valuePaths.concat();
+
+  const parent = childPaths.shift();
+  const hasChild = childPaths.length > 0;
+
+  const parentTypes: PropertyType[] = Array.isArray(root.type) ? root.type : [root.type];
+
+  if (parentTypes.includes('object')) {
+    if (root.properties && parent in root.properties) {
+      result = findSchemaNode(root.properties[parent], childPaths, valueType);
+      if (result) return result;
+    }
+
+    if (isObject(root.additionalProperties) && parent in root.additionalProperties) {
+      result = findSchemaNode(root.additionalProperties[parent], childPaths, valueType);
+      if (result) return result;
+    }
+
+    if (root.additionalProperties === true) {
+      return root;
+    }
+  }
+
+  if (parentTypes.includes('array') && /^\d+$/.test(parent)) {
+    if (root.items) {
+      result = findSchemaNode(root.items, childPaths, valueType);
+      if (result) return result;
+    }
+
+    return root;
+  }
+
+  if (!hasChild) {
+    return matchSchemaTail(root, valueType);
+  }
+}
+
+export function findSchemaNodeWithValue(root: JSONSchema, valuePaths: string[], value: any): JSONSchema | void {
+  return findSchemaNode(root, valuePaths, typeOf(value) as any);
+}
+
 function red(str: string) {
   return `\x1B[31m${str}\x1B[39m`;
 }

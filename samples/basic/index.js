@@ -16,6 +16,12 @@ vcon.setSchema({
         missed: {
           default: 'miss',
         },
+        ports: {
+          type: 'array',
+          items: {
+            type: 'number',
+          },
+        },
       },
     },
   },
@@ -35,3 +41,20 @@ assert(vcon.addExtension('.js').includes('.js'));
 assert.deepEqual(vcon.setOptions({ ext: ['.js', '.ts'] }, true).ext, ['.js', '.ts'], 'options should be overridden');
 
 assert.equal(sources.length, 1, 'load() should return sources');
+
+var newVal = 'new value';
+var setResult = vcon.set('app.foo', newVal);
+
+assert.equal(setResult.errors.length, 0);
+assert.equal(newVal, vcon.get('app.foo'));
+
+assert.equal(vcon.get('app.ports.0'), 3000);
+
+var newVal_2 = 8080;
+var setResult_2 = vcon.set('app.ports.0', newVal_2);
+
+assert.equal(setResult_2.errors.length, 0);
+assert.equal(newVal_2, vcon.get('app.ports.0'));
+
+var setResultFailed = vcon.set('app.ports.0', 'foo');
+assert.equal(setResultFailed.errors.length, 1);
