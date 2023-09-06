@@ -76,7 +76,7 @@ export class Vcon {
       });
     }
   }
-  public setOptions(options: VconOptions, override: boolean): VconNormalizedOptions {
+  public setOptions(options: VconOptions, override?: boolean): VconNormalizedOptions {
     if (override) return (this._options = normalizeOptions(options));
 
     return Object.assign(this._options, options);
