@@ -320,6 +320,25 @@ export class Vcon {
   setSchema(schema: VconSchema) {
     this._schema = schema;
   }
+
+  /**
+   * Create an instance with the same features as the current instance,inherited the same options/plugins/parsers
+   */
+  create(options: VconOptions = {}): Vcon {
+    const instance = new Vcon(this._options);
+
+    instance.setOptions(options, false);
+
+    for (const [_, parser] of this._parsers) {
+      instance.addParser(parser);
+    }
+
+    for (const [_, plugin] of this._plugins) {
+      instance.addPlugin(plugin);
+    }
+
+    return instance;
+  }
 }
 
 interface LoadResult<Config = any> {
