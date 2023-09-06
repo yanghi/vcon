@@ -1,6 +1,6 @@
 {
   "name": "vcon",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Customizable configuration controls",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,8 +10,8 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@vcon/core": "1.5.1",
-    "@vcon/node": "1.5.1"
+    "@vcon/core": "1.5.2",
+    "@vcon/node": "1.5.2"
   },
   "author": "Yang Hai <yanghi-x@outlook.com>",
   "repository": {
