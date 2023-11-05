@@ -1,4 +1,12 @@
-import { VconSchema, SchemaError, JSONSchema, findSchemaNodeWithValue } from './schema';
+import {
+  VconSchema,
+  SchemaError,
+  JSONSchema,
+  findSchemaNodeWithValue,
+  SchemaHooks,
+  SchemaScheduler,
+  schemaErrorLog,
+} from './schema';
 import { VconParser } from './parser';
 import { VconLoader } from './loader';
 import {
@@ -11,6 +19,8 @@ import { VconPlugin } from './plugin';
 import { dotProp } from '../utils/dotProp';
 import { walkSchema } from './schema';
 import { IError } from './error';
+import { SyncBailHook } from './hook/SyncBailHook';
+import { ErrorCollection } from './ErrorCollection';
 
 export interface VconNormalizedOptions {
   ext: string[];
@@ -56,8 +66,27 @@ export class Vcon {
   private _options: VconNormalizedOptions;
 
   private __init_hooks__?: Function[];
+
+  readonly hooks: {
+    schema: SchemaHooks;
+  } = {
+    schema: {
+      parseValue: new SyncBailHook(),
+    },
+  };
+
+  private _schemaScheduler: SchemaScheduler;
+
   constructor(options: VconOptions = {}) {
     this._options = normalizeOptions(options);
+
+    this._schemaScheduler = {
+      error: new ErrorCollection({
+        log: schemaErrorLog,
+        strict: this._options.strict,
+      }),
+      hooks: this.hooks.schema,
+    };
 
     const initHooks = Object.getPrototypeOf(this).__init_hooks__;
 
@@ -177,10 +206,10 @@ export class Vcon {
         ? this.getSchema(setOptions.schemaPath)
         : findSchemaNodeWithValue(this._schema, dotPaths, value);
 
+      const scheduler = this._schemaScheduler;
+
       if (targetSchema) {
-        const { result, scheduler } = walkSchema(targetSchema, value, {
-          strict: false,
-        });
+        const { result } = walkSchema(scheduler, targetSchema, value);
 
         if (scheduler.error.size) {
           const errors = scheduler.error.errorList();
@@ -339,9 +368,11 @@ export class Vcon {
     }
 
     if (this._schema) {
-      const { result, scheduler } = walkSchema(this._schema, dotProp(this._configSources, '0.config').value, {
-        strict: this._options.strict,
-      });
+      const { result, scheduler } = walkSchema(
+        this._schemaScheduler,
+        this._schema,
+        dotProp(this._configSources, '0.config').value,
+      );
 
       const schemaErrors = scheduler.error.errorList();
 

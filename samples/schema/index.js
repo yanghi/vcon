@@ -146,6 +146,7 @@ if (shouldPass) {
 }
 
 function hasErrorOnShemaPath(path, count) {
+  // console.log('hasError',Array.from(error.entries()))
   assert.equal(error.filter((e) => e.schemaPath === path).length, count, `Has ${count} errors on ${path}`);
   expected += count;
 }

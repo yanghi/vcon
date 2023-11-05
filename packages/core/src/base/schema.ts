@@ -1,6 +1,8 @@
 import { duplicatesElements, hasOwnProp, isInteger, isObject, quoteValue, typeOf, uniqueArray } from '../utils';
 import { IError } from './error';
+import { SyncBailHook } from './hook/SyncBailHook';
 import { TransformType, transform } from './transform';
+import { ErrorCollection, ErrorCollectionOptions } from './ErrorCollection';
 
 export type PropertyType = 'object' | 'array' | 'string' | 'boolean' | 'number' | 'null' | 'integer' | 'any';
 
@@ -94,13 +96,13 @@ function normalizedRootSchema(schema: VconSchema): JSONSchema {
 function validateSchemaType(
   name: string,
   schema: JSONSchema,
-  schemaValue: any,
+  value: any,
 ): [PropertyType | undefined, Error | undefined] {
   if (!schema.type || schema.type == 'any') return ['any', undefined];
 
-  let type = typeOf(schemaValue);
+  let type = typeOf(value);
   if (typeof schema.type === 'string') {
-    if (schema.type === 'integer' && isInteger(schemaValue)) {
+    if (schema.type === 'integer' && isInteger(value)) {
       type = 'integer' as any;
     }
     if (type != schema.type) {
@@ -160,35 +162,57 @@ function getchemaPath(parent, current: string | number) {
   return parent + '/' + current;
 }
 
-function walk(
-  scheduler: SchemaScheduler,
-  schema: JSONSchema,
-  schemaValue: any,
-  name: string,
-  currentSchemaPath: string,
-  onPass: (value: SchemaValue) => void,
-) {
-  normalizeSchema(schema);
+type Paths = {
+  schemaPath: string;
+  schemaName: string | number | undefined;
+  propertyName: string | number | undefined;
+  propertyPath: string;
+};
 
-  if (schemaValue === undefined) {
+class SchemaMetas {
+  public readonly originValue: any;
+  constructor(
+    public readonly schema: JSONSchema,
+    public readonly schemaPath: string,
+    public readonly schemaName: string | number | undefined,
+    public value: any,
+    public readonly propertyPath: string,
+    public readonly propertyName: string | number | undefined,
+  ) {
+    this.originValue = value;
+  }
+}
+
+function walk(scheduler: SchemaScheduler, metas: SchemaMetas, onPass: (value: SchemaValue) => void) {
+  normalizeSchema(metas.schema);
+
+  let { value, schema } = metas;
+
+  if (value === undefined) {
     if (hasOwnProp(schema, 'default')) {
-      schemaValue = schema.default;
+      value = schema.default;
     }
+  }
+
+  const parsedValue = scheduler.hooks.parseValue.call(null, value, metas);
+
+  if (parsedValue !== undefined) {
+    value = metas.value = parsedValue;
   }
 
   const addError = (keyword: SchemaKeyword, msg: string, reasons?: SchemaError['reasons']) => {
     scheduler.error.add(
-      name,
-      makeSchemaError(keyword, msg, name, getchemaPath(currentSchemaPath, keyword), schema, reasons),
+      metas.propertyPath,
+      makeSchemaError(keyword, msg, metas.propertyPath, getchemaPath(metas.schemaPath, keyword), schema, reasons),
     );
   };
 
-  const getNextSchemaPath = (next: string) => getchemaPath(currentSchemaPath, next);
+  const getNextSchemaPath = (next: string) => getchemaPath(metas.schemaPath, next);
 
   let inspectType: PropertyType | undefined;
 
   let checkType = true;
-  if (schemaValue === undefined) {
+  if (value === undefined) {
     if (schema.required) {
       addError('required', `Missing required value`);
       return;
@@ -198,16 +222,16 @@ function walk(
   }
 
   if (checkType) {
-    let validateTypeRes = validateSchemaType(name, schema, schemaValue);
+    let validateTypeRes = validateSchemaType(metas.schemaPath, schema, value);
 
     if (validateTypeRes[1] && schema.transform) {
-      const transformResult = transform({ value: schemaValue, type: schema.type }, schema.transform);
+      const transformResult = transform({ value: value, type: schema.type }, schema.transform);
 
       if (transformResult.transformed) {
-        validateTypeRes = validateSchemaType(name, schema, transformResult.value);
+        validateTypeRes = validateSchemaType(metas.schemaPath, schema, transformResult.value);
 
         if (!validateTypeRes[1]) {
-          schemaValue = transformResult.value;
+          value = transformResult.value;
         }
       }
       transformResult.errors && addError('transform', `Transform error`, transformResult.errors);
@@ -219,11 +243,11 @@ function walk(
 
   if (!inspectType) return;
 
-  onPass(schemaValue);
+  onPass(value);
 
   if (inspectType == 'object') {
     if (Array.isArray(schema.required)) {
-      let missed = schema.required.filter((required) => !hasOwnProp(schemaValue, required));
+      let missed = schema.required.filter((required) => !hasOwnProp(value, required));
       if (missed.length) {
         addError('required', `Missing required properties, missing : [${missed.join(',')}]`);
       }
@@ -233,60 +257,68 @@ function walk(
       for (let prop in schema.properties) {
         walk(
           scheduler,
-          schema.properties[prop],
-          schemaValue?.[prop],
-          namePath(name, prop),
-          getNextSchemaPath('properties/' + prop),
-          (value) => {
-            schemaValue[prop] = value;
+          new SchemaMetas(
+            schema.properties[prop],
+            getNextSchemaPath('properties/' + prop),
+            prop,
+            value?.[prop],
+            namePath(metas.propertyPath, prop),
+            prop,
+          ),
+          (_value) => {
+            value[prop] = _value;
           },
         );
       }
     }
     if (schema.additionalProperties == false) {
-      for (let key in schemaValue) {
+      for (let key in value) {
         if (!hasOwnProp(schema.properties, key)) {
           addError('additionalProperties', `No additional properties, got additional properties "${key}"`);
           continue;
         }
       }
     } else if (isObject(schema.additionalProperties)) {
-      for (let key in schemaValue) {
+      for (let key in value) {
         if (!hasOwnProp(schema.properties, key)) {
           // todo, walk with a flag that to sign this is additional properties
           walk(
             scheduler,
-            schema.additionalProperties,
-            schemaValue[key],
-            namePath(name, key),
-            getNextSchemaPath('additionalProperties/' + key),
-            (value) => {
-              schemaValue[key] = value;
+            new SchemaMetas(
+              schema.additionalProperties,
+              getNextSchemaPath('additionalProperties/' + key),
+              key,
+              value[key],
+              namePath(metas.propertyPath, key),
+              key,
+            ),
+            (_value) => {
+              value[key] = _value;
             },
           );
         }
       }
     }
   } else if (inspectType === 'array') {
-    if (schema.items && schemaValue) {
-      const anyOfArr = schema.items.anyOf || [];
-
-      const notArr = schema.not || [];
-
-      for (let i = 0; i < schemaValue.length; i++) {
-        const itemPath = namePath(name, i, true);
-        walk(scheduler, schema.items, schemaValue[i], itemPath, getNextSchemaPath('items'), (value) => {
-          schemaValue[i] = value;
-        });
+    if (schema.items && value) {
+      for (let i = 0; i < value.length; i++) {
+        const itemPath = namePath(metas.propertyPath, i, true);
+        walk(
+          scheduler,
+          new SchemaMetas(schema.items, getNextSchemaPath('items'), 'items', value[i], itemPath, i),
+          (_value) => {
+            value[i] = _value;
+          },
+        );
       }
-      if (schema.minItems && schemaValue.length < schema.minItems) {
+      if (schema.minItems && value.length < schema.minItems) {
         addError('minItems', 'There must be a minimum of ' + schema.minItems + ' in the array');
       }
-      if (schema.maxItems && schemaValue.length > schema.maxItems) {
+      if (schema.maxItems && value.length > schema.maxItems) {
         addError('maxItems', 'There must be a maximum of ' + schema.maxItems + ' in the array');
       }
       if (schema.uniqueItems) {
-        const duplicates = duplicatesElements(schemaValue);
+        const duplicates = duplicatesElements(value);
 
         if (duplicates.length) {
           addError('uniqueItems', `Duplicates items, duplicated items: ${quoteValue(duplicates)}`);
@@ -294,44 +326,33 @@ function walk(
       }
     }
   } else {
-    if (schema.maxLength && typeof schemaValue == 'string' && schemaValue.length > schema.maxLength) {
+    if (schema.maxLength && typeof value == 'string' && value.length > schema.maxLength) {
       addError(
         'maxLength',
-        `Invalid characters length, may only be ${schema.maxLength}  characters long, got ${schemaValue.length}`,
+        `Invalid characters length, may only be ${schema.maxLength}  characters long, got ${value.length}`,
       );
     }
-    if (schema.minLength && typeof schemaValue == 'string' && schemaValue.length < schema.minLength) {
+    if (schema.minLength && typeof value == 'string' && value.length < schema.minLength) {
       addError(
         'minLength',
-        `Invalid characters length, must be at least ${schema.minLength} characters long, got ${schemaValue.length}`,
+        `Invalid characters length, must be at least ${schema.minLength} characters long, got ${value.length}`,
       );
     }
-    if (
-      typeof schema.minimum !== 'undefined' &&
-      typeof schemaValue == typeof schema.minimum &&
-      schema.minimum > schemaValue
-    ) {
-      addError('minimum', `Invalid range, must have a minimum value of ${schema.minimum}, got ${schemaValue}`);
+    if (typeof schema.minimum !== 'undefined' && typeof value == typeof schema.minimum && schema.minimum > value) {
+      addError('minimum', `Invalid range, must have a minimum value of ${schema.minimum}, got ${value}`);
     }
-    if (
-      typeof schema.maximum !== 'undefined' &&
-      typeof schemaValue == typeof schema.maximum &&
-      schema.maximum < schemaValue
-    ) {
-      addError('maximum', `Invalid range, must have a maximum value of ${schema.maximum}, got ${schemaValue}`);
+    if (typeof schema.maximum !== 'undefined' && typeof value == typeof schema.maximum && schema.maximum < value) {
+      addError('maximum', `Invalid range, must have a maximum value of ${schema.maximum}, got ${value}`);
     }
 
-    if (schema.pattern && typeof schemaValue == 'string' && !schemaValue.match(schema.pattern)) {
-      addError('pattern', `Pattern not match, string "${schemaValue}" not match the regex pattern ${schema.pattern}`);
+    if (schema.pattern && typeof value == 'string' && !value.match(schema.pattern)) {
+      addError('pattern', `Pattern not match, string "${value}" not match the regex pattern ${schema.pattern}`);
     }
 
     if (schema.enum) {
-      let matched = schema.enum.find((em) => em === schemaValue);
+      let matched = schema.enum.find((em) => em === value);
       if (!matched) {
-        addError(
-          'enum',
-          `Invalid value, ${quoteValue(schemaValue)} not one of the enumeration ${schema.enum.join(',')}`,
-        );
+        addError('enum', `Invalid value, ${quoteValue(value)} not one of the enumeration ${schema.enum.join(',')}`);
       }
     }
   }
@@ -348,7 +369,11 @@ function walk(
           const anyOfSchema = anyOfArr[j];
           const anyOfErrorCollection = new ErrorCollection<SchemaError>();
 
-          walk({ error: anyOfErrorCollection }, anyOfSchema, schemaValue, name, childSchema, () => {});
+          walk(
+            { ...scheduler, error: anyOfErrorCollection },
+            new SchemaMetas(anyOfSchema, childSchema, j, value, metas.propertyPath, metas.propertyName),
+            () => {},
+          );
 
           anyOfExpected = !anyOfErrorCollection.size;
 
@@ -373,7 +398,11 @@ function walk(
           const notSchema = notArr[j];
           const errorCollection = new ErrorCollection<SchemaError>();
 
-          walk({ error: errorCollection }, notSchema, schemaValue, name, childSchema, () => {});
+          walk(
+            { ...scheduler, error: errorCollection },
+            new SchemaMetas(notSchema, childSchema, j, value, metas.propertyPath, metas.propertyName),
+            () => {},
+          );
 
           expected = errorCollection.size > 0;
 
@@ -397,7 +426,11 @@ function walk(
         const schemaItem = allOf[j];
         const errorCollection = new ErrorCollection<SchemaError>();
 
-        walk({ error: errorCollection }, schemaItem, schemaValue, name, childSchema, () => {});
+        walk(
+          { ...scheduler, error: errorCollection },
+          new SchemaMetas(schemaItem, childSchema, metas.schemaPath, value, metas.propertyPath, metas.propertyName),
+          () => {},
+        );
 
         expected = errorCollection.size == 0;
 
@@ -420,7 +453,11 @@ function walk(
         const schemaItem = oneOf[j];
         const errorCollection = new ErrorCollection<SchemaError>();
 
-        walk({ error: errorCollection }, schemaItem, schemaValue, name, childSchema, () => {});
+        walk(
+          { ...scheduler, error: errorCollection, hooks: scheduler.hooks },
+          new SchemaMetas(schemaItem, childSchema, j, value, metas.propertyPath, metas.propertyName),
+          () => {},
+        );
 
         if (!errorCollection.size) {
           expectedCount++;
@@ -438,93 +475,28 @@ function walk(
   }
 }
 
-interface SchemaScheduler {
+export type ParseSchemaValueHook = SyncBailHook<(result: any, metas: SchemaMetas) => any>;
+
+export interface SchemaHooks {
+  parseValue: ParseSchemaValueHook;
+}
+
+export interface SchemaScheduler {
   error: ErrorCollection<SchemaError>;
+  hooks: SchemaHooks;
 }
 
-interface ErrorCollectionOptions<E extends IError = Error> {
-  strict?: boolean;
-  log?(this: ErrorCollection<E>, error: ErrorCollection<E>['errors']): void;
-}
-class ErrorCollection<E extends IError = Error> {
-  private errors = new Map<string, E[]>();
-  constructor(public options: ErrorCollectionOptions<E> = {}) {}
-  private _size: number = 0;
-  get size() {
-    return this._size;
-  }
-  log() {
-    if (this.errors.size) {
-      if (this.options.log) {
-        return this.options.log.call(this, this.errors);
-      }
-
-      console.log(`[Vcon Schema] got ${this._size} errors:`);
-      this.errors.forEach((errors, key) => {
-        console.log(`Got ${errors.length} errors on ${key}:`);
-        for (let i = 0; i < errors.length; i++) {
-          console.log('  ', errors[i].message);
-        }
-      });
-    }
-  }
-  add(name: string, e: E | void | undefined | E[]) {
-    if (e) {
-      if (!this.errors.has(name)) {
-        this.errors.set(name, []);
-      }
-      const group = this.errors.get(name);
-      if (Array.isArray(e)) {
-        group.push(...e);
-        this._size += e.length;
-      } else {
-        group.push(e);
-        this._size++;
-      }
-      if (this.options.strict) {
-        this.log();
-        if (global && global.process) {
-          process.exit(1);
-        }
-      }
-    }
-  }
-  values() {
-    return this.errors.values();
-  }
-  get(name: string) {
-    return this.errors.get(name);
-  }
-  errorList() {
-    let all: E[] = [];
-
-    this.errors.forEach((arr) => {
-      all = all.concat(arr);
-    });
-
-    return all;
-  }
-}
-
-export function walkSchema(
-  schema: VconSchema,
-  schemaValue: SchemaValue,
-  errorOptions: ErrorCollectionOptions<SchemaError> = {},
-) {
-  if (!errorOptions.log) {
-    errorOptions.log = schemaErrorLog;
-  }
-
-  const scheduler: SchemaScheduler = {
-    error: new ErrorCollection<SchemaError>(errorOptions),
-  };
-
-  walk(scheduler, normalizedRootSchema(schema), schemaValue, ROOT_OBJECT, SCHEMA_ROOT, (value) => {
-    schemaValue = value;
-  });
+export function walkSchema(scheduler: SchemaScheduler, schema: VconSchema, value: SchemaValue) {
+  walk(
+    scheduler,
+    new SchemaMetas(normalizedRootSchema(schema), SCHEMA_ROOT, undefined, value, ROOT_OBJECT, undefined),
+    (_value) => {
+      value = _value;
+    },
+  );
 
   return {
-    result: schemaValue,
+    result: value,
     scheduler,
   };
 }
@@ -598,7 +570,7 @@ function errorLog(...args: any[]) {
   );
 }
 
-const schemaErrorLog: ErrorCollectionOptions<SchemaError>['log'] = function (errors) {
+export const schemaErrorLog: ErrorCollectionOptions<SchemaError>['log'] = function (errors) {
   errorLog(`[vcon schema] got ${this.size} errors:\n`);
 
   errors.forEach((errorArr, path) => {

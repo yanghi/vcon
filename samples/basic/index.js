@@ -24,8 +24,28 @@ vcon.setSchema({
         },
       },
     },
+    version: {
+      type: 'integer',
+    },
   },
 });
+
+vcon.hooks.schema.parseValue.addHandler((result, metas) => {
+  if (metas.propertyName == 'version') {
+    assert.equal(result, 1);
+
+    return result + 1;
+  }
+});
+
+vcon.hooks.schema.parseValue.addHandler((result, metas) => {
+  if (metas.propertyName == 'version') {
+    assert.equal(result, 2);
+    return result * 10;
+  }
+});
+
+assert.equal(vcon.get('version'), 20);
 
 const { sources } = vcon.load();
 
