@@ -3,5 +3,6 @@
     "foo": "foo",
     "ports": [3000]
   },
-  "version": 1
+  "version": 1,
+  "env": "$NODE_ENV"
 }

@@ -5,6 +5,8 @@ vcon.addConfig('./configs/default');
 vcon.addConfig('./configs/json5');
 vcon.addConfig('./configs/yaml');
 
+process.env.NODE_ENV = 'test';
+
 vcon.setSchema({
   properties: {
     app: {
@@ -26,6 +28,9 @@ vcon.setSchema({
     },
     version: {
       type: 'integer',
+    },
+    env: {
+      type: 'string',
     },
   },
 });
@@ -78,3 +83,5 @@ assert.equal(newVal_2, vcon.get('app.ports.0'));
 
 var setResultFailed = vcon.set('app.ports.0', 'foo');
 assert.equal(setResultFailed.errors.length, 1);
+
+assert.equal(vcon.get('env'), 'test');
